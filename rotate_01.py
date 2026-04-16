@@ -49,6 +49,7 @@ pixel_dict = {}
 # width, height = im.size
 
 spacing = 36 + 13 + 36
+print(f"SPACING: {spacing}")
 spaced_y = 36
 
 for i in range(0, height):
@@ -62,25 +63,21 @@ for i in range(0, height):
         spaced_x = (spaced_x+spacing)
 
     spaced_y = spaced_y + spacing
-    #print(px[pixel_coord])
-    #pixel_coord = (spaced, spaced_columns)
-    #print(px[pixel_coord])
 
+def make_starting_image(img_name):
 
-import sys
+    with Image.new(mode="RGBA", size=(width, height), color=(0,0,0)) as im:
 
-with Image.new(mode="RGBA", size=(width, height), color=(0,0,0)) as im:
+        for coordinate, pixel_value in pixel_dict.items():
 
-    for coordinate, pixel_value in pixel_dict.items():
+            draw = ImageDraw.Draw(im)
+            draw.circle(coordinate, radius=32, fill=pixel_value, outline=(0,0,0))
 
-        draw = ImageDraw.Draw(im)
-        draw.circle(coordinate, radius=32, fill=pixel_value, outline=(0,0,0))
-
-    # write to stdout
-    #im.save("recreate_with_circles_test1", "PNG")
-    #im.save("mark_children.png", "PNG")
-    im.save(mark_children, "PNG")
-    #im.save(sys.stdout, "PNG")
+        # write to stdout
+        #im.save("recreate_with_circles_test1", "PNG")
+        #im.save("mark_children.png", "PNG")
+        im.save(img_name, "PNG")
+        #im.save(sys.stdout, "PNG")
 
 """
 Oh shit it actually worked. Okay.
@@ -95,37 +92,39 @@ child_dict = {}
 
 for points in pixel_dict.keys():
     spaced_x, spaced_y = points
-    print(f"POINT: x,y: {points}")
+    """print(f"POINT: x,y: {points}")
     print(f"spaced_x + spacing: {spaced_x + spacing}")
     print(f"spaced_x - spacing: {spaced_x - spacing}")
     print(f"spaced_y + spacing: {spaced_y + spacing}")
-    print(f"spaced_y - spacing: {spaced_y - spacing}")
+    print(f"spaced_y - spacing: {spaced_y - spacing}")"""
     #child_points = list((x, y) for (x, y) in pixel_dict.keys() if (x == (spaced_x + spacing) or x == (spaced_x - spacing)) and (y == (spaced_y + spacing) or y == (spaced_y - spacing)))
     child_points = list((x, y) for (x, y) in pixel_dict.keys() if (((x == (spaced_x + spacing) or x == (spaced_x - spacing)) and (y == spaced_y))) or (x == spaced_x and (y == (spaced_y + spacing) or y == (spaced_y - spacing))))# + spacing) or y == (spaced_y - spacing)))
     child_dict[points] = child_points
-    print(f"Child points of {points}:\n{child_points}")
+    #print(f"Child points of {points}:\n{child_points}")
 
 #with Image.open("mark_children.png") as im:
-with Image.open(mark_children) as im:
-    radius = 25
-    for coordinate, pixel_value in pixel_dict.items():
-        x_main, _ = coordinate
-        radius = radius - 1
-        if radius <= 10:
-            radius = 25
-        children = child_dict[coordinate]
-        for child_coords in children:
-            x, _ = child_coords
-            if x == x_main:
-                a, b, c = pixel_value
-                pixel_value = tuple((a+35, b+35, c+35))
-            draw = ImageDraw.Draw(im)
-            #draw.circle(child_coords, radius=radius, fill=pixel_value, outline=(1,1,1))
-            draw.circle(child_coords, radius=radius, outline=pixel_value, width=2)
+def make_child_image():
+    with Image.open(mark_children) as im:
+        radius = 25
+        for coordinate, pixel_value in pixel_dict.items():
+            x_main, _ = coordinate
+            radius = radius - 1
+            if radius <= 10:
+                radius = 25
+            children = child_dict[coordinate]
 
-    # write to stdout
-    #im.save("mark_children.png", "PNG")
-    im.save(mark_children, "PNG")
+            for child_coords in children:
+                x, _ = child_coords
+                if x == x_main:
+                    a, b, c = pixel_value
+                    pixel_value = tuple((a+35, b+35, c+35))
+                draw = ImageDraw.Draw(im)
+                #draw.circle(child_coords, radius=radius, fill=pixel_value, outline=(1,1,1))
+                draw.circle(child_coords, radius=radius, outline=pixel_value, width=2)
+
+        # write to stdout
+        #im.save("mark_children.png", "PNG")
+        im.save(mark_children, "PNG")
     #im.save(sys.stdout, "PNG")
 
 """
@@ -144,3 +143,64 @@ elif len(children) > 2:
 well that doesn't actually rotate anything, but conceptually.
 Anyway. 11.40pm, going to try to sleep.
 """
+
+class base_positions:
+
+    children_dict:dict = {}
+    coord_dict:dict = {}
+
+    def __init__(self, children_dict):
+        self.children_dict = children_dict
+        pass
+
+    def get_row_and_column(self):
+        # pixel_coord = (spaced_x, spaced_y)
+        rows = set()
+        columns = set()
+        pos_dict = {"rows": {}, "columns": {}}
+        col_count = 0
+        for i, coord in enumerate(pixel_dict): # is the dict that just stored the list of points + col values
+            x, y = coord
+            if x not in rows:
+                rows.add(x)
+                pos_dict["rows"][i] = x
+            if y not in columns:
+                columns.add(y)
+                pos_dict["columns"][col_count] = y
+                col_count += 1
+        #print(f"ROWS: {sorted(rows)}")
+        #print(f"COLUMNS: {sorted(columns)}")
+        print(f"POS DICT: {pos_dict}")
+        self.coord_dict = pos_dict
+        pass
+
+    def add_dots_at_children(self, coord):
+        children = self.children_dict[coord]
+        d_a_c = "dots_at_children.png"
+
+        make_starting_image(d_a_c)
+
+        with Image.open(d_a_c) as im:
+            radius = 25
+
+            x_main, _ = coord
+            pixel_value = pixel_dict[coord]
+
+            for child_coords in children:
+                x, _ = child_coords
+                if x == x_main:
+                    a, b, c = pixel_value
+                    pixel_value = tuple((a+35, b+35, c+35))
+                draw = ImageDraw.Draw(im)
+                #draw.circle(child_coords, radius=radius, fill=pixel_value, outline=(1,1,1))
+                draw.circle(child_coords, radius=radius, outline=pixel_value, width=2)
+
+            # write to stdout
+            #im.save("mark_children.png", "PNG")
+            im.save(d_a_c, "PNG")
+
+base_pos = base_positions(child_dict)
+
+base_pos.get_row_and_column()
+selected_coord = (base_pos.coord_dict["rows"][2], base_pos.coord_dict["columns"][3])
+base_pos.add_dots_at_children(selected_coord) # oh shit, this worked too. Nice. Now how to rotate them...
