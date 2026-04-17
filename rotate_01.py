@@ -1,36 +1,5 @@
 """want to make that game I saw in an add, where you have to correctly rotate clusters of 4 colours so they all line up."""
 
-"""
-Thoughts:
-make a grid.
-at each gridpoint, add 4 surrounding points, with colours.
-each gridpoint (except those at edges) can be traded with the neighbour (eg:
-    a     b
- a  1  a  2  b   <<-- '1' controls all of a and can rotate them around itself. 2 controls all of b and the rightmost 'a' and can rotate them around itself.)
-    a     b
-
-So I need a way to manage grid points and their rotation (and to keep a 'before' version, to realign all parts to the 'correct' orientation (they start correct then rotate randomly to make the 'puzzle')), and the matching of each part. So each 'point' of each gridpoint has a 'target'.
-Note: 'points' of gridpoints here are not the things that rotate, but are set. So in the example above,
-
-    a     a
- a  1  b  2  b   <<-- '2' has rotated once clockwise, but the centre point (was a, now b) has the same 'target' - targets are for the space, not the conceptual 'point' that is rotating. Targets are on the ground, points are floating above them. Yes? Think so.
-    a     b
-
-
-The grid is drawn up with each gridpoint 'point' on its target. Then, each gridpoint is rotated a random number of times in a random order, and the goal is to get it all back to position.
-
-background image can be random, pattern, image, whatever. Stripes/gradients probably a good start? Not sure.
-
-Anyway. That's the intent. 9:14pm, 15/4/26
-
-72px squares, roughly 13 pixels apart. (Will remake with better spacings later.)
-use no_border version for testing.
-
-So, midpoint of each square is 36 + 13 + 36 apart. top left square center is 36,36 from 0,0.
-
-"""
-
-
 from PIL import Image, ImageDraw
 
 base_image = "better_differentiation.png"
@@ -97,11 +66,19 @@ class image_data:
 
         self.spacing = int(dot_radius/2) + spacing_between + int(dot_radius/2)
 
+    def get_child_dict(self):
+        child_dict = {}
+
+        for points in self.pixel_dict.keys():
+            spaced_x, spaced_y = points
+            child_points = list((x, y) for (x, y) in self.pixel_dict.keys() if (((x == (spaced_x + self.spacing) or x == (spaced_x - self.spacing)) and (y == spaced_y))) or (x == spaced_x and (y == (spaced_y + self.spacing) or y == (spaced_y - self.spacing))))# + spacing) or y == (spaced_y - spacing)))
+            child_dict[points] = child_points
+        return child_dict
+
 class base_positions:
 
     children_dict:dict = {}
     coord_dict:dict = {}
-    pixel_dict:dict = {}
 
     ordered_children:dict = {}
     """ordered_children[centre_coordinates][position_str]"""
@@ -255,7 +232,7 @@ class base_positions:
 
             done_row_nos = set()
             done_col_nos = set()
-            #row_0 = self.coord_dict["rows"][0]
+
             column_0 = self.coord_dict["columns"][0]
             for column_no, col_coord in self.coord_dict["columns"].items():
                 for row_no, coord in self.coord_dict["rows"].items():
@@ -278,6 +255,7 @@ class base_positions:
 
             im.save(img_data.filename, "PNG")
 
+
 def make_starting_image():
 
     with Image.new(mode="RGBA", size=(img_data.width, img_data.height), color=(0,0,0)) as im:
@@ -288,17 +266,6 @@ def make_starting_image():
             draw.circle(coordinate, radius=32, fill=pixel_value, outline=(0,0,0))
 
         im.save(img_data.filename, "PNG")
-
-
-def get_child_dict():
-    child_dict = {}
-
-    for points in img_data.pixel_dict.keys():
-        spaced_x, spaced_y = points
-        child_points = list((x, y) for (x, y) in img_data.pixel_dict.keys() if (((x == (spaced_x + img_data.spacing) or x == (spaced_x - img_data.spacing)) and (y == spaced_y))) or (x == spaced_x and (y == (spaced_y + img_data.spacing) or y == (spaced_y - img_data.spacing))))# + spacing) or y == (spaced_y - spacing)))
-        child_dict[points] = child_points
-    return child_dict
-
 
 def select_coords(column:int=2, row:int=2):
     selected_coord = (base_pos.coord_dict["columns"][column], base_pos.coord_dict["rows"][row])
@@ -339,8 +306,17 @@ def print_point_data(coord):
 def initial_setup(base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
     img_data.set_file_data(base_file, filename, width, height, dot_radius, spacing_between)
     generate_starting_image()
-    child_dict = get_child_dict()
+    child_dict = img_data.get_child_dict()
     base_pos.set_dicts(child_dict)
+
+##### GUI #####
+
+def start_gui():
+    from rotate_gui_01 import splash_window, main_window
+    splash_window()
+    while True:
+        if main_window(img_data.pixel_dict, base_pos.coord_dict):
+            break
 
 def main():
 
@@ -356,11 +332,16 @@ def main():
             print_point_data(coord)
 
     else:
-        row = 2
-        column = 2
-        setup_grid()
-        coord = rotate_single_point(row=row, column=column)
-        print_extras()
-        print_point_data(coord)
+        run_gui=True
+        if run_gui:
+            setup_grid()
+            start_gui()
+        else:
+            row = 2
+            column = 2
+            setup_grid()
+            coord = rotate_single_point(row=row, column=column)
+            print_extras()
+            print_point_data(coord)
 
 main()
