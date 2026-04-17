@@ -174,6 +174,52 @@ class base_positions:
         self.coord_dict = pos_dict
         pass
 
+    def align_children(self, selected_coord=None): # adding this so I can get the children in the correct 0,1,2,3 order to rotate properly.
+        # children = self.children_dict[coord]
+        self.ordered_children = {}
+        for point, children in self.children_dict.items():
+            point_x, point_y = point
+            if selected_coord and point != selected_coord:
+                continue
+            print(f"POINT: {point}")
+            self.ordered_children[point] = {}
+            for i, child in enumerate(children):
+                x, y = child
+                if x == point_x and y == point_x:
+                    self.ordered_children[point]["top"] = child
+                    print(f"Child is top: {child}")
+                elif x == point_y and y  == point_y:
+                    self.ordered_children[point]["right"] = child
+                    print(f"Child is right: {child}")
+
+                elif x == point_x and y > point_y:
+                    self.ordered_children[point]["bottom"] = child
+                    print(f"Child is bottom: {child}")
+                elif x < point_x and y == point_y:
+                    self.ordered_children[point]["left"] = child
+                    print(f"Child is left: {child}")
+                else:
+                    print(f"Coord is not top/bottom/left/right of {point}: {child}")
+
+                """if i == 0:
+                    self.ordered_children[point]["top"] = child
+                    print(f"Child is top: {child}")
+
+                    top_row, centre_col = child
+                elif x > top_row and y == centre_col:
+                    self.ordered_children[point]["bottom"] = child
+                    print(f"Child is bottom: {child}")
+                elif x > top_row and y > centre_col:
+                    self.ordered_children[point]["right"] = child
+                    print(f"Child is right: {child}")
+                elif x > top_row and y < centre_col:
+                    self.ordered_children[point]["left"] = child
+                    print(f"Child is left: {child}")
+                else:
+                    print(f"Coord is not top/bottom/left/right of {point}: {child}")"""
+
+            print(f"self.ordered_children: {self.ordered_children}")
+
     def add_dots_at_children(self, coord):
         children = self.children_dict[coord]
         d_a_c = "dots_at_children.png"
@@ -185,22 +231,115 @@ class base_positions:
 
             x_main, _ = coord
             pixel_value = pixel_dict[coord]
-
-            for child_coords in children:
-                x, _ = child_coords
+            child_colours = {}
+            for i, child_coords in enumerate(children):
+                child_col = pixel_dict[child_coords]
+                child_colours[i] = child_col
+            print(f"Child colours: {child_colours}")
+            print(f"CHILDREN: {children}")
+            for i, child_coords in enumerate(children):
+                print(f"i in child coords: {i}")
+                if i+1 == len(child_colours):
+                    child_col = child_colours[0]
+                else:
+                    child_col = child_colours[i+1]
+                print(f"Child col: {child_col}")
+                """x, _ = child_coords
                 if x == x_main:
                     a, b, c = pixel_value
-                    pixel_value = tuple((a+35, b+35, c+35))
+                    pixel_value = tuple((a+35, b+35, c+35))"""
                 draw = ImageDraw.Draw(im)
                 #draw.circle(child_coords, radius=radius, fill=pixel_value, outline=(1,1,1))
-                draw.circle(child_coords, radius=radius, outline=pixel_value, width=2)
-
+                draw.circle(child_coords, radius=radius, fill=child_col, width=2)
+                draw.text(xy=child_coords, text=str(i), fill="#000000")
+                """Currently this is wrong, because the 'children' are
+                   0
+                1     2
+                   3
+                which makes perfect sense but I'm thinking of it as
+                   0
+                3     1
+                   2
+                Okay.
+                """
             # write to stdout
             #im.save("mark_children.png", "PNG")
             im.save(d_a_c, "PNG")
 
+    def get_positioning(self, coord):# testing
+
+        children = self.ordered_children[coord]
+        unordered_children = self.children_dict[coord]
+        d_a_c = "dots_at_children.png"
+
+        make_starting_image(d_a_c)
+
+        with Image.open(d_a_c) as im:
+            radius = 25
+
+            x_main, _ = coord
+            pixel_value = pixel_dict[coord]
+
+            print(f"CHILDREN: {children}")
+            draw = ImageDraw.Draw(im)
+            draw.text(xy=coord, text=str(f"CENTER\n{coord}"), fill="#FFFFFF")
+
+            def draw_ordered(draw, children):
+                for position, child_coords in children.items():
+                    child_col = pixel_dict[child_coords]
+                    print(f"position in child coords: {position}\n")
+                    print(f"coords: {child_coords} // Child col: {child_col}")
+
+                    #draw.circle(child_coords, radius=radius, fill=pixel_value, outline=(1,1,1))
+                    draw.circle(child_coords, radius=radius, fill=child_col, width=2)
+                    draw.text(xy=child_coords, text=str(position), fill="#000000")
+
+            def draw_coords(draw, unordered_children):
+                for child in unordered_children:
+                    draw.text(xy=child, text=str(f"{child}"), fill="#FFFFFF")
+
+            draw_coords(draw, unordered_children)
+            draw_ordered(draw, children)
+            # write to stdout
+            #im.save("mark_children.png", "PNG")
+            im.save(d_a_c, "PNG")
+
+    def add_dots_at_correct_children(self, coord):
+
+        children = self.ordered_children[coord]
+        d_a_c = "dots_at_children.png"
+
+        rotated_children = {}
+        if len(children) == 4:
+            rotated_children["top"] = (children["right"], pixel_dict[children["top"]])
+            rotated_children["right"] = (children["bottom"], pixel_dict[children["right"]])
+            rotated_children["bottom"] = (children["left"], pixel_dict[children["bottom"]])
+            rotated_children["left"] = (children["top"], pixel_dict[children["left"]])
+
+        make_starting_image(d_a_c)
+
+        with Image.open(d_a_c) as im:
+            radius = 25
+
+            for position, child_coords in rotated_children.items():
+                child_coords, child_colour = child_coords
+                #pixel_value = pixel_dict[child_coords]
+
+                draw = ImageDraw.Draw(im)
+                #draw.circle(child_coords, radius=radius, fill=pixel_value, outline=(1,1,1))
+                draw.circle(child_coords, radius=radius, fill=child_colour, width=2)
+                draw.text(xy=child_coords, text=str(position), fill="#000000")
+
+            # write to stdout
+            #im.save("mark_children.png", "PNG")
+            im.save(d_a_c, "PNG")
 base_pos = base_positions(child_dict)
 
 base_pos.get_row_and_column()
 selected_coord = (base_pos.coord_dict["rows"][2], base_pos.coord_dict["columns"][3])
-base_pos.add_dots_at_children(selected_coord) # oh shit, this worked too. Nice. Now how to rotate them...
+base_pos.align_children(selected_coord)
+#base_pos.add_dots_at_children(selected_coord) # oh shit, this worked too. Nice. Now how to rotate them...
+base_pos.get_positioning(selected_coord)
+base_pos.add_dots_at_correct_children(selected_coord)
+"""
+So maybe the best way is to define each point's children's points, instead of looking it up each time? then just do an offset of the pixel value assignment?"""
