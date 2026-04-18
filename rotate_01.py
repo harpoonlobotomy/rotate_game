@@ -53,6 +53,8 @@ class image_data:
                 width, height = im.size
                 print(f"width, height: {width, height}")
 
+        """ Here need to set a default image size and scale if needed. Spacing etc needs to also change. This is set up for a premade grid, so maybe a whole different one that just goes by x pixels directly. Not sure."""
+
         self.filename = filename
 
         self.width = width
@@ -151,7 +153,6 @@ class base_positions:
                 draw.text(xy=coord_placement, text=str(coord), fill="#FFFFFF")
         im.save(img_data.filename, "PNG")
 
-
     def order_children(self, children):
         """to ensure they follow the ordering of ["right", "bottom", "left", "top"]; currently, those in the far right column don't."""
         order = ["top", "right", "bottom", "left"]
@@ -188,8 +189,6 @@ class base_positions:
         #print(f"[add_dots_at_correct_children] CHILDREN: {children}")
         #children = self.order_children(children)
         rotated_children = {}
-        child_a = None
-        child_b = None
 
         reordered = self.reindex_children(children)
         #print(f"CHILDREN: {children} // REORDERED: {reordered}")
@@ -315,11 +314,12 @@ def start_gui():
     from rotate_gui_01 import splash_window, main_window
     splash_window()
     while True:
-        if main_window(img_data, base_pos):
+        outcome = main_window(img_data, base_pos)
+        if outcome:
             break
-    return "done"
+    return outcome
 
-def main():
+def main(base_image=base_image):
 
     initial_setup(base_file=base_image, filename = "image_name_for_testing.png")
 
@@ -335,9 +335,15 @@ def main():
     else:
         run_gui=True
         if run_gui:
-            setup_grid()
-            if start_gui():
-                exit()
+            while True:
+                setup_grid()
+                outcome = start_gui()
+                if outcome and outcome == "Done":
+                    exit()
+                if "restart" in outcome:
+                    outcome = outcome.replace("restart_", "")
+                    initial_setup(base_file=outcome, filename = f"{outcome}_output.png")
+
         else:
             row = 2
             column = 2
