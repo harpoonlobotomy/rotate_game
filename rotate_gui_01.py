@@ -31,10 +31,30 @@ class theme_data():
 
     screen_x = 480
     screen_y = 640
+    maximise_window=True
+    maximised_size:tuple = (0,0)
         #sg.theme('farkle_tan')
 
 theme = theme_data()
 
+class buttonClass():
+
+    def __init__(self):
+        self.row_dict:dict = {}
+        self.row_column_dict:dict = {}
+
+    def make_row_col_dict(self):
+        self.coord_list = []
+        for row, _ in self.row_dict.items():
+            self.row_column_dict[row] = {}
+            for column, entry in enumerate(self.row_dict[row]):
+                #print(f"ROW: {row} // column : {column} // entry: {entry}")
+                self.row_column_dict[row][column] = entry
+                self.coord_list.append(entry)
+
+        print(self.row_column_dict)
+
+buttons = buttonClass()
 
 def splash_window(): #separate window so it can be left open during play if desired
     splashscreen_panel = [
@@ -84,52 +104,121 @@ def main_window(pixel_dict, coord_dict):
         print(f"RADIOS: {radios}")
         return radios
 
-
     sg.Column(layout=make_all_buttons())"""
 
     #grid_panel = [[sg.Column(layout=make_all_buttons())]]#sg.Multiline(default_text = sg.list_of_look_and_feel_values(), size=(int((theme.screen_x*.66)/8), 20))]]
 
     button_dict = {}
+    button_key_dict = {}
+    button_size = (16, 8)
+
+    font_size = 12
+
+    def get_button_size():
+        no_of_rows = len(coord_dict["rows"])
+        no_of_cols = len(coord_dict["columns"])
+        if no_of_rows != no_of_cols:
+            if no_of_cols < no_of_rows:
+                no_of_rows = no_of_cols ## just need whichever is smaller to use for button size. with this, no_of_rows is always smallest.
+
+        #if theme.maximise_window:
+            #max_x, max_y = theme.maximised_size
+        #else:
+        max_y = theme.screen_y
+        max_y = max_y*.8
+        max_y_each = int((max_y/font_size)/no_of_rows)
+        if max_y_each % 2 != 0:
+            max_y_each += 1
+
+        if max_y_each == 2:
+            max_y_each = 4
+        print(f"Max y each: {max_y_each}")
+        button_size = (max_y_each-2, int(max_y_each/2)-1)#
+
+        return button_size
+
+    button_size = get_button_size()
+
     for row_no, x_val in coord_dict["rows"].items():#coord dict: {'rows': {0: 36, 1: 121, 2: 206, 3: 291, 4: 376}, 'columns': {0: 36, 1: 121, 2: 206, 3: 291, 4: 376}}
         button_list = []
         for col_no, y_val in coord_dict["columns"].items():
             coord = (x_val, y_val)
-            button_list.append(sg.Button(button_text="", button_color=get_col_from_col_code(pixel_dict[coord]), font="courier 12", size=(16,8), key=str(coord)))
+            button_list.append(sg.Button(button_text="", button_color=get_col_from_col_code(pixel_dict[coord]), font=f"courier {font_size}", size=button_size, key=str(coord), pad=7))
         button_dict[row_no] = button_list
+        button_key_dict[row_no] = list(i.key for i in button_list)
 
-    grid = sg.Column(button_list for button_list in button_dict.values())
+    #print(f"\nBUTTON DICT [ by row_number[coord]]:\n{button_key_dict}\n\n")
+    buttons.row_dict = button_key_dict
+    buttons.make_row_col_dict()
 
-    grid_panel = [[sg.VStretch()], #### This shit refuses to be in the middle of this panel. Will look at it again tomorrow.
-        [sg.Stretch(), grid, sg.Stretch()],
-        [sg.VStretch()]]
+    """
+    BUTTON DICT [ by row_number[coord]]:
+        {0: ['(36, 36)', '(36, 121)', '(36, 206)', '(36, 291)', '(36, 376)'], 1: ['(121, 36)', '(121, 121)', '(121, 206)', '(121, 291)', '(121, 376)'], 2: ['(206, 36)', '(206, 121)', '(206, 206)', '(206, 291)', '(206, 376)'], 3: ['(291, 36)', '(291, 121)', '(291,
+        206)', '(291, 291)', '(291, 376)'], 4: ['(376, 36)', '(376, 121)', '(376, 206)', '(376, 291)', '(376, 376)']}
+    """
 
+    grid_region = "maroon"
 
-    #print(f"button_dict: {button_dict}")
-    #central_panel = [
-            #[sg.Column(grid_panel, element_justification="center"), sg.RButton(button_text="", button_color="pink"), sg.Text(text="W", background_color="green", font="arial 10 bold"), sg.Radio(text="W", group_id="01", background_color="green", circle_color="yellow", size=(1, 3), font="arial 10 bold")]
-            #[sg.Column()]
-            #]
+    #grid = sg.Column(button_list for button_list in button_dict.values())
+    grid = sg.Column(
+            [button_list for button_list in button_dict.values()],
+            pad=(0, 0),
+            element_justification='center', background_color="blue", key="button_grid"
+        )
+
+    grid_panel = [
+        [sg.Canvas(size=(int(theme.screen_x*.66), 0), pad=0)],
+        [sg.VStretch(background_color=grid_region)],
+        [sg.Canvas(size=(1, theme.screen_y), pad=0, background_color="yellow"), sg.Stretch(background_color=grid_region), grid, sg.Stretch(background_color=grid_region)],
+        [sg.VStretch(background_color=grid_region)]
+        ]
 
 
 #### Side panel ###
-    temp_side_panel = [[sg.Canvas(size=((int(theme.screen_x*.33)-55), int((theme.screen_y*.33)-35)))]]
-    temp_side_panel_2 = [[sg.Canvas(size=((int(theme.screen_x*.33)-55), int((theme.screen_y*.33)-35)))]]
-    temp_side_panel_3 = [[sg.Canvas(size=((int(theme.screen_x*.33)-55), int((theme.screen_y*.33)-35)))]]
-    side_panel = [[sg.Column(layout=temp_side_panel)], [sg.VStretch()], [sg.Column(layout=temp_side_panel_2)], [sg.VStretch()], [sg.Column(layout=temp_side_panel_3)]]
+    side_panel_size = (5,5)#((int(theme.screen_x*.33)-55), int((theme.screen_y*.33)-35))
+    side_panel_col = "pink"
+    #temp_side_panel = [[sg.Canvas(size=((int(theme.screen_x*.33)-55), int((theme.screen_y*.33)-35)))]]
+    #temp_side_panel_2 = [[sg.Stretch(), sg.Canvas(size=((int(theme.screen_x*.33)-55), int((theme.screen_y*.33)-35))), sg.Stretch()]]
+    #temp_side_panel_3 = [[sg.Canvas(size=((int(theme.screen_x*.33)-55), int((theme.screen_y*.33)-35)))]]
+    temp_side_panel = [[sg.Canvas(expand_x=False, expand_y=True, background_color=side_panel_col, size=side_panel_size)]]
+    temp_side_panel_2 = [[sg.Canvas(expand_x=False, expand_y=True, size=side_panel_size, background_color=side_panel_col)]]
+    temp_side_panel_3 = [[sg.Canvas(expand_x=False, expand_y=True, size=side_panel_size, background_color=side_panel_col)]]
+    side_panel = [[sg.Canvas(size=(int(theme.screen_x*.33), 0))], [sg.Column(layout=temp_side_panel)], [sg.VStretch()], [sg.Column(layout=temp_side_panel_2)], [sg.VStretch()], [sg.Column(layout=temp_side_panel_3)]]
 
-    layout = [[sg.Stretch()], [sg.Frame(title="~~ rotate game ~~", key="main_window", layout=[[sg.Column(grid_panel, element_justification="center", key="central", size=(int(theme.screen_x*.66), int(theme.screen_y-5)), background_color="maroon", pad=(5,5)), sg.Column(side_panel, key="side", size=(int(theme.screen_x*.33), int(theme.screen_y-5)), background_color="dark blue", pad=(5,5))]], font=("courier", 10, "bold"), relief="groove", pad=(5), border_width=5)]]
+    layout = [[sg.Frame(title="~~ rotate game ~~", key="main_window",
+                            layout=[[
+                                    sg.Column(layout=grid_panel, key="central",
+                                                background_color=grid_region, pad=(5,5), element_justification='center', justification="center", vertical_alignment='center', expand_x=True, expand_y=True),
+                                    sg.Stretch(),
+                                    sg.Column(side_panel, key="side", justification = "center", element_justification="center", vertical_alignment="center",
+                                                background_color="dark blue", pad=(5,5))]],
+                            font=("courier", 10, "bold"), relief="groove", pad=(5), border_width=5, expand_x=True, expand_y=True)]]
 
     window = sg.Window(' •• ROTATE •• ', layout, keep_on_top=False, finalize=True, margins=(3,3), no_titlebar=False, resizable=True, size=(theme.screen_x, theme.screen_y), return_keyboard_events=True, enable_window_config_events=True, element_justification="center")
-    # 1305, 576
-    # size=(theme.screen_x, theme.screen_y
+
+    if theme.maximise_window:
+        window.Maximize()
+        theme.maximised_size = tuple(window.size)
+    button_size = get_button_size()
+
     while True:
         event, _ = window.read(timeout=1000)
         if event and "Escape" in event:
             return "Done"
-        if event != "__TIMEOUT__":
+
+        if event in buttons.coord_list:
+            print(f"Button pressed: {event}")
+
+        elif event != "__TIMEOUT__":
+            print(f"EVENT: {event}")
             if event == "__WINDOW CONFIG__":
                 #print(f"original screen_x, original screen_y: {theme.screen_x}, {theme.screen_y}")
+                if window.size == theme.maximised_size:
+                    theme.maximise_window = True
+                else:
+                    theme.maximise_window = False
                 new_screen_x, new_screen_y = window.size
+
                 if new_screen_x == theme.screen_x and new_screen_y == theme.screen_y:
                     continue
                 else:
@@ -155,7 +244,5 @@ def main_window(pixel_dict, coord_dict):
             return "Done"
 
 if __name__ == "__main__":
-    splash_window()
-    while True:
-        if main_window():
-            break
+    from rotate_01 import main
+    main()

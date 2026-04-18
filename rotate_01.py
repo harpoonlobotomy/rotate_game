@@ -317,6 +317,7 @@ def start_gui():
     while True:
         if main_window(img_data.pixel_dict, base_pos.coord_dict):
             break
+    return "done"
 
 def main():
 
@@ -335,7 +336,8 @@ def main():
         run_gui=True
         if run_gui:
             setup_grid()
-            start_gui()
+            if start_gui():
+                exit()
         else:
             row = 2
             column = 2
