@@ -315,7 +315,7 @@ def start_gui():
     from rotate_gui_01 import splash_window, main_window
     splash_window()
     while True:
-        if main_window(img_data.pixel_dict, base_pos.coord_dict):
+        if main_window(img_data, base_pos):
             break
     return "done"
 
