@@ -52,6 +52,7 @@ class theme_data():
 
     clicks = 0
     background_colour = "#82000F"
+    start_screen:bool = True # is what shows the 'gallery' and lets me get the region dimensions.
 
 theme = theme_data()
 
@@ -75,6 +76,21 @@ class buttonClass:
         """ self.clean_dict[coord] = {"pixel_coords": pix_coord, "children": {"top": (1,0)}, "target_colour": get_col_from_col_code(img_data.pixel_dict[(x_val, y_val)])} """
 
 
+    def img_from_coords(button, row, column):
+        """row_{row}_col_{column}.png"""
+
+        if button and isinstance(button, buttonClass.buttonInstance):
+            row, column = button.coords
+        elif button and isinstance(button, tuple):
+            row, column = button
+        elif button and isinstance(button, str):
+            row, column = eval(button)
+
+        if row and column:
+            img_filename = f"row_{row}_col_{column}.png"
+            return img_filename
+        else:
+            print(f"No row/column found from `button` : {button} / `row` : {row} / `column` : {column}")
     def colour_from_coords(self, coords, is_base=False, img_data=None):
 
         if isinstance(coords, str):
@@ -347,11 +363,20 @@ def main_window(img_data, base_pos):
     font_size = 12
 
     def get_button_size():
+
+        #no_of_rows = len(base_pos.coord_dict["rows"])
+        #no_of_cols = len(base_pos.coord_dict["columns"])
         no_of_rows = len(base_pos.coord_dict["rows"])
         no_of_cols = len(base_pos.coord_dict["columns"])
+        if not no_of_rows or not no_of_cols:
+            no_of_rows = no_of_cols = 5
+
+        print(f"no_of_rows: {no_of_rows}")
+        print(f"no_of_cols: {no_of_cols}")
         if no_of_rows != no_of_cols:
             if no_of_cols < no_of_rows:
                 no_of_rows = no_of_cols ## just need whichever is smaller to use for button size. with this, no_of_rows is always smallest.
+
 
         max_y = theme.screen_y
         max_y = max_y*.8
@@ -365,7 +390,8 @@ def main_window(img_data, base_pos):
 
         return button_size
 
-    button_size = get_button_size()
+    if not img_data.start_screen:
+        button_size = get_button_size()
 
     b.set_up_buttons(base_pos, img_data)
 
@@ -404,12 +430,25 @@ def main_window(img_data, base_pos):
             element_justification='center', background_color="blue", key="button_grid"
         )
 
-    grid_panel = [
-        [sg.Canvas(size=(int(theme.screen_x*.66), 0), pad=0)],
-        [sg.VStretch(background_color=theme.background_colour)],
-        [sg.Canvas(size=(1, theme.screen_y), pad=0, background_color="yellow"), sg.Stretch(background_color=theme.background_colour), grid, sg.Stretch(background_color=theme.background_colour)],
-        [sg.VStretch(background_color=theme.background_colour)]
-        ]
+    gallery_source = "manip_testing_2.png" # make a list/dict later and generate from that. this'll do for now.
+
+    if img_data.start_screen:
+        grid_panel = [
+            [sg.Canvas(size=(int(theme.screen_x*.66), 0), pad=0)],
+            [sg.VStretch(background_color=theme.background_colour)],
+            [sg.Canvas(size=(1, theme.screen_y), pad=0, background_color="yellow"), sg.Text("Click an image to use it as the base for the puzzle."),
+                sg.Button(button_text=gallery_source, image_filename=gallery_source, image_source=gallery_source, image_subsample=2, key="imgkey_manip_testing_2.png")],
+                #sg.Image(source="manip_testing_2.png", subsample=2, key="imgkey_manip_testing_2.png")],
+            [sg.VStretch(background_color=theme.background_colour)]
+            ]
+
+    else:
+        grid_panel = [
+            [sg.Canvas(size=(int(theme.screen_x*.66), 0), pad=0)],
+            [sg.VStretch(background_color=theme.background_colour)],
+            [sg.Canvas(size=(1, theme.screen_y), pad=0, background_color="yellow"), sg.Stretch(background_color=theme.background_colour), grid, sg.Stretch(background_color=theme.background_colour)],
+            [sg.VStretch(background_color=theme.background_colour)]
+            ]
 
     print("GETS TO HERE 2")
 
@@ -417,7 +456,8 @@ def main_window(img_data, base_pos):
 
     settings_panel = [
         [sg.Button(button_text=f"Set image", key="set_image")],
-        [sg.Button(button_text=f"Difficulty: {theme.difficulty_legend[theme.difficulty]}", key="set_difficulty")]
+        [sg.Button(button_text=f"Difficulty: {theme.difficulty_legend[theme.difficulty]}", key="set_difficulty"),
+         sg.Checkbox(text = f"use images (experimental): ", enable_events=True, key="set_use_images_checkbox", default=True)]
         ]
 
     scramble_panel = [
@@ -467,26 +507,29 @@ def main_window(img_data, base_pos):
 
         set_init_screen_size = (window.size)
 
-    button_size = get_button_size()
-    print("GETS TO HERE just before while_true")
-    print(f"Button grid size: window['central'].Size {window["central"].Size}")
-    print(f"Button grid size: window['central'].get_size(): {window["central"].get_size()}")
+    #button_size = get_button_size()
+    #print("GETS TO HERE just before while_true")
+    #print(f"Button grid size: window['central'].Size {window["central"].Size}")
+    #print(f"Button grid size: window['central'].get_size(): {window["central"].get_size()}")
 
-    not_read = True
     while True:
-        event, _ = window.read(timeout=1000)
-        if event:
-            if not_read:
+        event, values = window.read(timeout=1000)
 
-                """print(f"Button grid size: window['central'].Size {window["central"].Size}")
-                window["button_grid"].update()
-                print(f"button_grid Size = {window['button_grid'].get_size()}")
-                print(f"Button grid size: window['central'].get_size(): {window["central"].get_size()}")
-                print(f"Size = {window['central'].get_size()}")
-                print(f'window["central"].update(ColumnSize): {window["central"].update(ColumnSize)}')
-                print(f'window["central"].get_size(window["central"]): {window["central"].get_size(window["central"])}')
-                None of the above work. (Also adding anything inside get_size() fails, maybe in other versions it works?)"""
-                not_read = False
+        if img_data.start_screen:
+            if event and event.startswith("imgkey_"):
+                selected_imgname = event.replace("imgkey_", "")
+                region_size = window["central"].get_size()
+                from img_manipulation import generate_img_grid
+                new_image, coord_to_img_files, coord_list = generate_img_grid(selected_imgname, region_size)
+                img_data.new_img_data = new_image, coord_to_img_files, coord_list
+                print(f"Selected image: {selected_imgname}, region_size: {region_size}")
+                img_data.start_screen=False
+                window.close()
+                print(f"Returning `restart_{new_image}`")
+                return f"restart_{new_image}"
+
+        if event:
+
             if "Escape" in event or event == "exit":
                 window.close()
                 return "Done"
@@ -496,6 +539,10 @@ def main_window(img_data, base_pos):
                     new_img_name = change_image()
                     if new_img_name:
                         print(f"new_img_name: {new_img_name}")
+                        region_size = window["central"].get_size()
+                        from img_manipulation import generate_img_grid
+                        new_image, coord_to_img_files, coord_list = generate_img_grid(new_img_name, region_size)
+                        img_data.new_img_data = new_image, coord_to_img_files, coord_list
                         window.close()
                         return f"restart_{new_img_name}"
 
@@ -505,6 +552,10 @@ def main_window(img_data, base_pos):
                     set_difficulty()
                 elif event == "set_perfect":
                     set_solved(img_data)
+                elif event == "set_use_images_checkbox":
+                    if hasattr(values, event):
+                        img_data.use_images_not_colours = values.get(event)
+
 
             elif event == "get_hint":
                 show_incorrect()

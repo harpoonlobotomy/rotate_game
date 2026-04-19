@@ -123,16 +123,14 @@ def histograms(filename):
         histograms["green"].save("histogram_green.png", "PNG")
         histograms["blue"].save("histogram_blue.png", "PNG")
 
-
-class image_data:
+class image_manip_data:
 
     base_image:str=None
     filename:str=None
 
-    width:int=None
-    height:int=None
-    dot_radius:int=72
-    spacing_between_edges:int=13
+    base_img_width:int=None
+    base_img_height:int=None
+
     pixel_dict:dict={}
 
     str_to_coord:dict = {}
@@ -141,9 +139,9 @@ class image_data:
     def __init__(self):
         pass
 
-    def set_file_data(self, base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
+    def set_file_data(self, base_file=None, filename=None, region_size=None, padding=9):
             #NOTE: width and height should come from the grid region size check, not before. We make the window, then make sure the img fits it, not doubling back or just assuming so.
-            self.too_large = False
+
             import json
             settings = "rotate_settings.json"
             with open(settings, "r") as settings:
@@ -154,32 +152,32 @@ class image_data:
             self.default_screen_size = settings_data["screen_size"]
             self.is_fullscreen = settings_data["fullscreen"]
 
-            if base_file:
-                self.base_image = base_file
-                with Image.open(base_file) as im:
-                    width, height = im.size
-                    #print(f"base file starting width, height: {width, height}")
-                    #im.show()
-
-            """ Here need to set a default image size and scale if needed. Spacing etc needs to also change. This is set up for a premade grid, so maybe a whole different one that just goes by x pixels directly. Not sure."""
             self.filename = filename
 
-        #if filename != "image_name_for_testing.png":
+            if region_size:
+                self.max_screen_width, self.max_screen_height = region_size
+                for length in self.max_screen_width, self.max_screen_height:
+                    length = length - 80
+            else:
+                self.max_screen_width, self.max_screen_height = eval(self.default_screen_size)
+                for length in self.max_screen_width, self.max_screen_height:
+                    length = length / 2
 
-            self.width = width
-            self.height = height
+            self.padding=padding
 
-            if not self.width or not self.height:
-                print(f"Not self.width or self.height: {self.width} / {self.height}/ exiting, can't handle this yet.")
+            self.base_image = base_file
+
+            with Image.open(base_file) as im:
+                width, height = im.size
+            self.base_img_width = width
+            self.base_img_height = height
+
+            if not self.base_img_width or not self.base_img_height:
+                print(f"Not self.width or self.height: {self.base_img_width} / {self.base_img_height}/ exiting, can't handle this yet.")
                 exit()
 
-            self.dot_radius = dot_radius
-            self.spacing_between_edges = spacing_between
-
-            self.spacing = int(dot_radius/2) + spacing_between + int(dot_radius/2)
             """
-    |  |   |   |   |   |  |
-
+            So instead of the below, maybe I check to see whether w or h is closer to region dimensions (or which exceeds by more) and scale by that. Would make more sense. Currently the whole grid setup is expecting strictly squares, but I think it should be pretty straightforward to change it? I think....
             """
             target_x, target_y = eval(self.default_screen_size)
             target_x = int(target_x/2)
@@ -197,17 +195,16 @@ class image_data:
                 with Image.new("RGBA", size=(target_y, target_y)) as new_im:
                     new_im.paste(im)
                     new_im.save(self.filename, format="png")
-                    img_data.base_image = self.filename
+                    img_manip_data.base_image = self.filename
                     print(f"Base image saved at: {self.filename}")
 
-            self.width = target_y
-            self.height = target_y
-            self.spacing = int(self.width / self.grid_size)
-            self.dot_radius = int((self.spacing-5)/2) ## want to remove the 'radius' here entirely. If we're going to be outputting dot representations of the img, it should be defined by the dimensions, not hardcoded like this. This was just because I had a starting image to figure out how it'd work, not because it was a good idea.
-            self.spacing_between_edges = int(self.spacing - self.dot_radius)
-            print(f"width at end: {self.width}")
-            print(f"height at end: {self.height}")
-            print(f"self.dot_radius / spacing_between edges / spacing: {self.dot_radius} / {self.spacing_between_edges} / {self.spacing}")
+            self.base_img_width = target_y
+            self.base_img_height = target_y
+            self.spacing = int(self.base_img_width / self.grid_size)
+            #self.dot_radius = int((self.spacing-5)/2) ## want to remove the 'radius' here entirely. If we're going to be outputting dot representations of the img, it should be defined by the dimensions, not hardcoded like this. This was just because I had a starting image to figure out how it'd work, not because it was a good idea.
+            #self.spacing_between_edges = int(self.spacing - self.dot_radius)
+            print(f"width at end: {self.base_img_width}")
+            print(f"height at end: {self.base_img_height}")
 
     def quantise_img(self, Imageimage=None, combine=False, strength=2, save_file=False, is_tile=False):
 
@@ -279,15 +276,7 @@ class image_data:
             print(f"Histo: {histo_after}")
             im.show()
 """
-img_data = image_data()
-#input_filename = "image_name_for_testing.png" # r"Screenshot 2026-04-18 233936_output.png"
-input_filename = r"Screenshot 2026-04-18 233936_output.png"
-img_data.set_file_data(base_file = input_filename, filename="manip_testing.png")
-#histograms(img_data.filename)
-input_filename = "manip_testing_2.png"
-# v works v
-img_data.quantise_img(save_file = input_filename, strength=1)
-
+img_manip_data = image_manip_data()
 
 def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = False):
 
@@ -398,19 +387,25 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
         overlay_img = None
         make_overlay = True
 
+        coord_to_img_dict = {}
+
         if make_overlay:
             overlay_img = Image.new("RGBA", image_size, color="#458976")
 
+        coords = []
         new_image = Image.new("RGB", image_size)
         for row in outputs:
+            coord_to_img_dict[row] = {}
             for column in outputs[row]:
                 tile = outputs[row][column]
+                coords.append((row, column),)
+
                 if manipulate:
-                    tile = img_data.quantise_img(tile, combine=False, strength=subtlety, save_file=output_path, is_tile=True)
+                    tile = img_manip_data.quantise_img(tile, combine=False, strength=subtlety, save_file=output_path, is_tile=True)
                 if save_single:
                     with Image.new(mode="RGBA", size=tile.size, color=(255, 0, 0, 0)) as button_cropped:
-                        crop_value = 18
-                        box = (int(crop_value/2), int(crop_value/2), int(tile.size[0]-(crop_value/2)), int(tile.size[0]-(crop_value/2)))
+                        crop_value = 9
+                        box = (crop_value, crop_value, tile.size[0]-crop_value, tile.size[0]-crop_value)
                         button = tile.crop(box=box)
                         button_cropped.paste(im=button, box=box)
 
@@ -419,23 +414,24 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
                                 col_width, row * row_height + row_height)
                             overlay_img.paste(im=button_cropped, box=paste_box)
 
-                        output_dir = f"{os.getcwd()}" + r"\\tiles"
+                        output_dir = f"{os.getcwd()}" + r"\tiles"
                         outp_path = os.path.join(output_dir, f"row_{row}_col_{column}.png")
+                        coord_to_img_dict[row][column] = outp_path
                         button_cropped.save(outp_path) # final file outputs
 
-
-                #tile.show()
                 new_image.paste(tile, (column * tile.size[0], row * tile.size[1]))
 
-        button_cropped.show()
         if overlay_img:
-            overlay_img.show()
+            #overlay_img.show()
             overlay_img.save("overlay_img.png")
 
         if save_result:
-            overlay_img.save("overlay_img.png")
             new_image.save(output_path)
-        return new_image, output_dir
+
+        overlay_img.close()
+        new_image.close()
+        return output_path, coord_to_img_dict, coords
+        return new_image, coord_to_img_dict # sends the actual image instance
 
         """im.crop(box)"""
 
@@ -463,7 +459,7 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
         row_height = int(im.size[1] / rows)
 
     outputs = extract_tiles(im, col_width, row_height)
-    print(f"OUTPUTS: {outputs}")
+    #print(f"OUTPUTS: {outputs}")
 
     if save_tiles_alone:
         for n, item in enumerate(outputs):
@@ -473,8 +469,19 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
             item.save(outp_path) # final file outputs
 
     else: # assume we manipulate the image and reassemble
-        recombined = merge_tiles(outputs, image_size=im.size, manipulate=True, subtlety = 1, save_single=True, col_width=col_width, row_height=row_height)
+        new_image, coord_to_img_files, coords_list = merge_tiles(outputs, image_size=im.size, manipulate=True, subtlety = 1, save_single=True, col_width=col_width, row_height=row_height)
+        return new_image, coord_to_img_files, coords_list
+        """  coord_to_img_files: [row_no][column_no]["tile_filename.png"]  """
 
-        #reverse_split(outputs, rows, cols, image_path, should_cleanup=False, should_quiet=False)
+base_file = r"Screenshot 2026-04-18 233936_output.png"
 
-split_img("manip_testing_2.png", 4, 4, should_square=False, save_tiles_alone = False)
+def generate_img_grid(base_file, region_size=None):
+
+    #input_filename = "image_name_for_testing.png" # r"Screenshot 2026-04-18 233936_output.png"
+    temp_file_filename = f"{base_file.replace('.png', '')}_temp.png"
+    img_manip_data.set_file_data(base_file = base_file, filename=temp_file_filename, region_size=region_size)
+    #input_filename = "manip_testing_2.png"
+    img_manip_data.quantise_img(save_file = temp_file_filename, strength=1)
+
+    new_image, coord_to_img_files, coords_list = split_img(temp_file_filename, 4, 4, should_square=False, save_tiles_alone = False)
+    return new_image, coord_to_img_files, coords_list

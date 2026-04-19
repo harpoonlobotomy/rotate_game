@@ -50,14 +50,26 @@ def get_point_spacing():
 
 class image_data:
 
+    use_images_not_colours:bool = False#True # try to use tiled images instead of colours (not implemented)
     base_image:str=None
     filename:str=None
+    is_fullscreen:bool = True
+    default_screen_size:tuple = ()
+
+    grid_size = 5
+    difficulty = 1
+    background_colour = "maroon"
+    default_screen_size = (640, 480)
+    is_fullscreen = True
 
     width:int=None
     height:int=None
     dot_radius:int=72
     spacing_between_edges:int=13
     pixel_dict:dict={}
+
+    start_screen=True # True if need to show the 'gallery' intro panel
+    new_img_data:tuple[str, dict] = ()#new_image, coord_to_img_files # sending back from window so it's stored somewhere during the restart of window. bad way of doing it but sleep dep
 
     str_to_coord:dict = {}
     """[x, y coordinates] = (r, g, b values)"""
@@ -71,6 +83,7 @@ class image_data:
         settings = "rotate_settings.json"
         with open(settings, "r") as settings:
             settings_data = json.load(settings)
+
         self.grid_size = settings_data["grid_size"]
         self.difficulty = settings_data["difficulty"]
         self.background_colour = settings_data["background_colour"]
@@ -78,9 +91,14 @@ class image_data:
         self.is_fullscreen = settings_data["fullscreen"]
 
         if base_file:
-            self.base_image = base_file
-            with Image.open(base_file) as im:
+            print(f"BASE FILE: {base_file}, type: {type(base_file)}")
+            if isinstance(base_file, Image.Image):
+                print(f"DIR base_file: {dir(base_file)}")
                 width, height = im.size
+            else:
+                with Image.open(base_file) as im:
+                    width, height = im.size
+                self.base_image = base_file
                 col_print(f"width, height: {width, height}")
 
         """ Here need to set a default image size and scale if needed. Spacing etc needs to also change. This is set up for a premade grid, so maybe a whole different one that just goes by x pixels directly. Not sure."""
@@ -98,10 +116,7 @@ class image_data:
         self.spacing_between_edges = spacing_between
 
         self.spacing = int(dot_radius/2) + spacing_between + int(dot_radius/2)
-        """
-|  |   |   |   |   |  |
 
-        """
         target_x, target_y = eval(self.default_screen_size)
         target_x = int(target_x/2)
         target_y = int(target_y/2) # arbitrarily, img is half the screen size. Will figure a better way of doing it. Maybe an interim screen for image selection before the grid is generated, and the region area is defined then?
@@ -148,6 +163,7 @@ class base_positions:
 
     children_dict:dict = {}
     coord_dict:dict = {}
+    coords_list:list = []
 
     ordered_children:dict = {}
     """ordered_children[centre_coordinates][position_str]"""
@@ -178,7 +194,7 @@ class base_positions:
 
     def align_children(self, selected_coord=None): # adding this so I can get the children in the correct 0,1,2,3 order to rotate properly.
         # children = self.children_dict[coord]
-
+        print("in align_children")
         for point, children in self.children_dict.items():
             point_x, point_y = point
             if selected_coord and point != selected_coord:
@@ -203,7 +219,7 @@ class base_positions:
 
             #print(f"self.ordered_children[point]: {self.ordered_children[point]}")
             self.ordered_children[point] = self.order_children(self.ordered_children[point])
-            #print(f"self.ordered_children[point]: {self.ordered_children[point]}")
+        print(f"self.ordered_children[point]: {self.ordered_children[point]}")
 
 
     def print_all_coords(self):
@@ -382,12 +398,39 @@ def clean_colours():
             colour_code = get_col_from_col_code(r, b, g)
             img_data.pixel_dict[coord] = colour_code
 
+def generate_children(coords_list):
+    child_dict = {}
+    base_pos.coords_list = coords_list
+    for entry in coords_list:
+        row, column = entry
+        child_points = list((x, y) for (x, y) in coords_list if (((x == (row + 1) or x == (row - 1)) and (y == column))) or (x == row and (y == (column + 1) or y == (column - 1))))# + spacing) or y == (spaced_y - spacing)))
+        print(f"Central: {entry}\nChild points: {child_points}")
+        child_dict[entry] = child_points
+    print(f"child_dict: {child_dict}")
+    return child_dict
 
 def initial_setup(base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
-    img_data.set_file_data(base_file, filename, width, height, dot_radius, spacing_between)
-    get_point_spacing()
-    clean_colours()
-    child_dict = img_data.get_child_dict()
+
+    if img_data.use_images_not_colours:
+        print(f"use images not colours {img_data.use_images_not_colours}")
+        if img_data.new_img_data:
+            print("new_img_data found")
+            base_file, coord_to_img_files, coords_list = img_data.new_img_data
+        else:
+            from img_manipulation import generate_img_grid
+            base_file, coord_to_img_files, coords_list = generate_img_grid(base_file)
+
+        #clean_colours()
+        child_dict = generate_children(coords_list)
+        #child_dict = get_img_children(coord_to_img_files)
+
+    else:
+    ## Now here, both routes to restart with an image go through img_manip first. So instead of getting the dict here, it should go through the dict already made in img_manip.
+        img_data.set_file_data(base_file, filename, width, height, dot_radius, spacing_between)
+        get_point_spacing()
+        clean_colours()
+        child_dict = img_data.get_child_dict()
+
     base_pos.set_dicts(child_dict)
 
 ##### GUI #####
@@ -425,6 +468,7 @@ def main(base_image=base_image):
                 if "restart" in outcome:
                     outcome = outcome.replace("restart_", "")
                     outcome_filename = outcome.replace(".png", "").split("/")[-1]
+                    print(f"for restart initial setup: base_file = {outcome}, filename: {outcome_filename}")
                     initial_setup(base_file=outcome, filename = f"{outcome_filename}_output.png")
 
         else:
