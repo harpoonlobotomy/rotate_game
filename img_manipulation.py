@@ -209,9 +209,9 @@ class image_data:
             print(f"height at end: {self.height}")
             print(f"self.dot_radius / spacing_between edges / spacing: {self.dot_radius} / {self.spacing_between_edges} / {self.spacing}")
 
-    def quantise_img(self, Imageimage=None, combine=False, subtlety=2):
-        from time import sleep
+    def quantise_img(self, Imageimage=None, combine=False, strength=2, save_file=False, is_tile=False):
 
+        from PIL import ImageFilter as filt
         if Imageimage:
             im= Imageimage
         else:
@@ -222,11 +222,19 @@ class image_data:
         with Image.new("RGB", size=(width*2, height*2)) as new_image:
 
             #im.show()
-            im_1 = im.quantize(10)#, dither=False)
+            im = ImageOps.posterize(im, 6)
+            cutoff_val = (.5 if strength == 3 else .25 if strength == 2 else 5)
+            #im_1 = ImageOps.autocontrast(im, cutoff = .5, preserve_tone=True)
+            im_1 = im.quantize(method=1, colors=46, dither=False)#, dither=False)
             im_1 = im_1.convert("RGB")
-            im_2 = ImageOps.autocontrast(im_1, cutoff = .5, preserve_tone=True)
-            if subtlety <= 2:
-                return im_2
+            if strength == 1:
+                if not is_tile:
+                    im_1 = ImageOps.autocontrast(im_1, cutoff = .4, preserve_tone=True)
+                im_1 = im_1.filter(filter=filt.ModeFilter(size=3))
+                if save_file:
+                    im_1.save(save_file)
+                return im_1
+            im_2 = ImageOps.autocontrast(im_1, cutoff = .6, preserve_tone=True)
             #im_1.show()
             #contrast = ImageEnhance.Contrast(im)
             #contrast.enhance(1.5).show()
@@ -235,8 +243,11 @@ class image_data:
             #new_image.save(f"{self.filename.replace('.png', '')}_horizontal_concatenated_image.png")
 
             #exit()
-            from PIL import ImageFilter as filt
-            im_3 = im_2.filter(filter=filt.ModeFilter(size=10))
+            if strength == 2:
+                if save_file:
+                    im_2.save(save_file)
+                return im_2
+            im_3 = im_2.filter(filter=filt.ModeFilter(size=5))
             #im_3.show()
             #m = im.filter(filter=filt.DETAIL())
             #im.show()
@@ -260,6 +271,8 @@ class image_data:
             #im_filt_then_quan = im_filtered.quantize(20, dither=False)
             #im_filt_then_quan.show()
             #sleep(.5)
+            if save_file:
+                im_3.save(save_file)
             return im_3
             """histo_after = im.histogram()
             print(f"Histo: {histo_before}")
@@ -271,9 +284,9 @@ img_data = image_data()
 input_filename = r"Screenshot 2026-04-18 233936_output.png"
 img_data.set_file_data(base_file = input_filename, filename="manip_testing.png")
 #histograms(img_data.filename)
-
+input_filename = "manip_testing_2.png"
 # v works v
-img_data.quantise_img()
+img_data.quantise_img(save_file = input_filename, strength=1)
 
 
 def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = False):
@@ -379,21 +392,50 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
         #return outputs
         return output_dict
 
-    def merge_tiles(outputs, image_size, manipulate=True, subtlety=2):
+    def merge_tiles(outputs, image_size, manipulate=True, subtlety=2, save_single=False, save_result=True, save_base=True, col_width=5, row_height=5):
 
         output_path = r"tile_recombined_2.png"
+        overlay_img = None
+        make_overlay = True
+
+        if make_overlay:
+            overlay_img = Image.new("RGBA", image_size, color="#458976")
 
         new_image = Image.new("RGB", image_size)
         for row in outputs:
             for column in outputs[row]:
                 tile = outputs[row][column]
                 if manipulate:
-                    tile = img_data.quantise_img(tile, combine=False, subtlety=subtlety)
+                    tile = img_data.quantise_img(tile, combine=False, strength=subtlety, save_file=output_path, is_tile=True)
+                if save_single:
+                    with Image.new(mode="RGBA", size=tile.size, color=(255, 0, 0, 0)) as button_cropped:
+                        crop_value = 18
+                        box = (int(crop_value/2), int(crop_value/2), int(tile.size[0]-(crop_value/2)), int(tile.size[0]-(crop_value/2)))
+                        button = tile.crop(box=box)
+                        button_cropped.paste(im=button, box=box)
+
+                        if overlay_img:
+                            paste_box = (column * col_width, row * row_height, column * col_width +
+                                col_width, row * row_height + row_height)
+                            overlay_img.paste(im=button_cropped, box=paste_box)
+
+                        output_dir = f"{os.getcwd()}" + r"\\tiles"
+                        outp_path = os.path.join(output_dir, f"row_{row}_col_{column}.png")
+                        button_cropped.save(outp_path) # final file outputs
+
 
                 #tile.show()
                 new_image.paste(tile, (column * tile.size[0], row * tile.size[1]))
-        print("Saving merged image: " + output_path)
-        return new_image, output_path # no reason to sent it back out here, I'm just playing around.
+
+        button_cropped.show()
+        if overlay_img:
+            overlay_img.show()
+            overlay_img.save("overlay_img.png")
+
+        if save_result:
+            overlay_img.save("overlay_img.png")
+            new_image.save(output_path)
+        return new_image, output_dir
 
         """im.crop(box)"""
 
@@ -431,8 +473,8 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
             item.save(outp_path) # final file outputs
 
     else: # assume we manipulate the image and reassemble
-        recombined, output_path = merge_tiles(outputs, image_size=im.size)
-        recombined.save(output_path)
+        recombined = merge_tiles(outputs, image_size=im.size, manipulate=True, subtlety = 1, save_single=True, col_width=col_width, row_height=row_height)
+
         #reverse_split(outputs, rows, cols, image_path, should_cleanup=False, should_quiet=False)
 
-split_img("manip_testing.png", 4, 4, should_square=False, save_tiles_alone = False)
+split_img("manip_testing_2.png", 4, 4, should_square=False, save_tiles_alone = False)
