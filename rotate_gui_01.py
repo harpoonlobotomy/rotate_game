@@ -1,7 +1,11 @@
-from ast import literal_eval
-from re import M
 
 import FreeSimpleGUI as sg
+
+def col_print(string):
+    print_col_prints = False
+    if print_col_prints:
+        print(string)
+
 class theme_data():
 
     def __init__(self):
@@ -107,14 +111,14 @@ class buttonClass:
         rotated_children = {}
         children = b.clean_dict[coord]["children"]
         reordered = base_pos.reindex_children(children)
-        print(f"CHILDREN: {children} // REORDERED: {reordered}")
+        col_print(f"CHILDREN: {children} // REORDERED: {reordered}")
         for child in children:
             orig_index = list(children).index(child)
             new_index = list(reordered).index(child)
             #rotated_children[list(children)[new_index]] = (children[list(children)[orig_index]], b.colour_from_coords(children[list(children)[new_index]], img_data))
             rotated_children[list(children)[new_index]] = (children[list(children)[orig_index]], b.by_coord[(children[list(children)[new_index]])].current_colour)#), img_data))
 
-        print(f"Rotated children: {rotated_children}")
+        col_print(f"Rotated children: {rotated_children}")
         return rotated_children
         """
 
@@ -221,11 +225,21 @@ def main_window(img_data, base_pos):
             return file_selected
 
 
-    def check_if_completed():
+    def check_if_completed(record_incomplete=False):
+        """RETURNS LIST OF BUTTON INSTANCES"""
         not_complete = False
+        incorrect_buttons = []
         for button in b.by_coord.values():
             if button.current_colour != button.target_colour:
+                #print(f"Button current colour is not target: {button.coords}")
                 not_complete = True
+                if record_incomplete:
+                    incorrect_buttons.append(button)
+            #elif button.current_colour == button.target_colour:
+                    #print(f"Button current colour is target: {button.coords}")
+
+        if record_incomplete and not_complete:
+            return incorrect_buttons
 
         if not not_complete:
             print("All correct!")
@@ -258,11 +272,43 @@ def main_window(img_data, base_pos):
 
         update_clicks(reset=True)
 
+    def show_incorrect():
+        print("In show_incorrect.")
+        incorrect_buttons = check_if_completed(record_incomplete=True)
+        if not incorrect_buttons:
+            print("No incorrect buttons to highlight.")
+            return
+        """incorrect_buttons == list of buttonInstances"""
+        #print(f"Incorrect buttons: {incorrect_buttons}")
+        saved_colours = {}
+        from time import sleep
+        for button in incorrect_buttons:
+            #print(f"button in incorrect buttons: {button.coords}")
+            button:buttonClass.buttonInstance
+            saved_colours[button] = button.current_colour
+            window[str(button.coords)].update(button_color=("black", "white"))
+            window.refresh()
+            sleep(.02)
+
+        #print(f"Saved colours: {saved_colours}")
+        #window["button_grid"].update()
+        #window.refresh()
+        sleep(.5)
+
+
+        for button in incorrect_buttons:
+            button:buttonClass.buttonInstance
+            window[str(button.coords)].update(button_color=("black", saved_colours[button]))
+            window.refresh()
+            sleep(.02)
+
+            #restore_colour =
+
     def rotate_children(rotated_children, update=True):
 
         for _, child_coords in rotated_children.items():
             child_coords, child_colour = child_coords
-            print(f"child_coords: {child_coords} / child_colour: {child_colour}")
+            col_print(f"child_coords: {child_coords} / child_colour: {child_colour}")
             #pixel_value = img_data.pixel_dict[child_coords]
             #if img_data.pixel_dict[child_coords] == child_colour:
                 #a, b, c = child_colour
@@ -290,7 +336,7 @@ def main_window(img_data, base_pos):
             if number_of_clicks > 1:
                 for _ in range(number_of_clicks-1):
                     rotate_children(rotated_children, update=False)
-            print(f"Children to rotate: {rotated_children}")
+            col_print(f"Children to rotate: {rotated_children}")
             rotate_children(rotated_children)
         update_clicks(reset=True)
 
@@ -325,7 +371,7 @@ def main_window(img_data, base_pos):
 
     def make_button(coord):
 
-        button = sg.Button(button_text="", button_color=img_data.pixel_dict[coord], font=f"courier {font_size}", size=button_size, key=str(coord), pad=15, border_width=3)
+        button = sg.Button(button_text="", button_color=img_data.pixel_dict[coord], font=f"courier {font_size}", size=button_size, key=str(coord), pad=1, border_width=3)
         button_inst = b.buttonInstance(coord)
         b.buttons.add(button_inst)
         b.by_coord[coord] = button_inst
@@ -334,7 +380,7 @@ def main_window(img_data, base_pos):
 
     button_dict = {}
 
-    print(f"\n\nb.row_column_dict: \n\n{b.row_column_dict}\n\n")
+    col_print(f"\n\nb.row_column_dict: \n\n{b.row_column_dict}\n\n")
     for column in b.row_column_dict:
 
         button_list = []
@@ -378,6 +424,10 @@ def main_window(img_data, base_pos):
         [sg.Button(button_text="Scramble", key="set_scramble")]
         ]
 
+    hint_panel = [
+        [sg.Button(button_text="Show incorrect", key="get_hint")]
+        ]
+
     reset_panel = [
         [sg.Button(button_text="Perfect Solve", key="set_perfect")]
         ]
@@ -393,6 +443,7 @@ def main_window(img_data, base_pos):
     side_panel = [[sg.Canvas(size=(int(theme.screen_x*.33), 0))],
                   [sg.Column(layout=settings_panel)], [sg.VStretch()],
                   [sg.Column(layout=scramble_panel)], [sg.VStretch()],
+                  [sg.Column(layout=hint_panel)], [sg.VStretch()],
                   [sg.Column(layout=reset_panel)], [sg.VStretch()],
                   [sg.Column(layout=clicks_panel)], [sg.VStretch()],
                   [sg.Column(layout=exit_panel)]]
@@ -418,9 +469,24 @@ def main_window(img_data, base_pos):
 
     button_size = get_button_size()
     print("GETS TO HERE just before while_true")
+    print(f"Button grid size: window['central'].Size {window["central"].Size}")
+    print(f"Button grid size: window['central'].get_size(): {window["central"].get_size()}")
+
+    not_read = True
     while True:
         event, _ = window.read(timeout=1000)
         if event:
+            if not_read:
+
+                """print(f"Button grid size: window['central'].Size {window["central"].Size}")
+                window["button_grid"].update()
+                print(f"button_grid Size = {window['button_grid'].get_size()}")
+                print(f"Button grid size: window['central'].get_size(): {window["central"].get_size()}")
+                print(f"Size = {window['central'].get_size()}")
+                print(f'window["central"].update(ColumnSize): {window["central"].update(ColumnSize)}')
+                print(f'window["central"].get_size(window["central"]): {window["central"].get_size(window["central"])}')
+                None of the above work. (Also adding anything inside get_size() fails, maybe in other versions it works?)"""
+                not_read = False
             if "Escape" in event or event == "exit":
                 window.close()
                 return "Done"
@@ -437,12 +503,18 @@ def main_window(img_data, base_pos):
                     scramble_colours()
                 elif event == "set_difficulty":
                     set_difficulty()
-                    pass
                 elif event == "set_perfect":
                     set_solved(img_data)
-                    pass
 
-            if event in img_data.str_to_coord:
+            elif event == "get_hint":
+                show_incorrect()
+
+            elif event in img_data.str_to_coord:
+                #window["button_grid"].update()
+                print(f"button_grid Size = {window['button_grid'].get_size()}")
+                #window["central"].update()
+                print(f"central Size = {window['central'].get_size()}")
+                # Size = (1054, 967) <-- okay so it works once something's been pressed. This is getting the button grid itself, but assumedly it will work for the column in general? Will test. Answer: yes. Pressing a button in button_grid gets the correct size. Okay.
                 event = img_data.str_to_coord[event]
                 #print(f"b.by_coord: \n{b.by_coord}\n\n img_data.str_to_coord: \n{img_data.str_to_coord}\n\n")
                 update_clicks()

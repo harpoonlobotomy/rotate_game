@@ -2,6 +2,12 @@
 
 from PIL import Image, ImageDraw
 
+def col_print(string):
+    print_col_prints = False
+    if print_col_prints:
+        print(string)
+
+
 base_image = "better_differentiation.png"
 
 def get_point_spacing():
@@ -16,27 +22,27 @@ def get_point_spacing():
         exit()
     # note: (row, column) - so changing the first and not the second goes left>right.
 
-    print(f"SPACING: {img_data.spacing}")
+    col_print(f"SPACING: {img_data.spacing}")
     spaced_x = int(img_data.dot_radius/2)
 
     for i in range(0, int(img_data.height/img_data.spacing)):
-        print(f"img_data.height: {img_data.height} // i: {i}")
+        col_print(f"img_data.height: {img_data.height} // i: {i}")
         spaced_y = int(img_data.dot_radius/2)
 
         for ib in range(0, int(img_data.width/img_data.spacing)):
             pixel_coord = (i, ib)
-            print(f"PIXEL COORD: {pixel_coord}\nwidth: {img_data.width}, height: {img_data.height}")
+            col_print(f"PIXEL COORD: {pixel_coord}\nwidth: {img_data.width}, height: {img_data.height}")
             if (spaced_y > img_data.width) or (spaced_x > img_data.height):
                 continue
             pixel_coord_2 = (spaced_x, spaced_y)
             img_x, img_y = px_size
             pixel_coordinate = ((i * img_data.spacing), (ib * img_data.spacing))
-            print(f"px[pixel_coord_2: {px[pixel_coord_2]}]")
-            print(f"pixel_coordinate: {pixel_coordinate}]")
-            print(f"pixel_coord_2: {pixel_coord_2}]")
+            col_print(f"px[pixel_coord_2: {px[pixel_coord_2]}]")
+            col_print(f"pixel_coordinate: {pixel_coordinate}]")
+            col_print(f"pixel_coord_2: {pixel_coord_2}]")
             #img_data.pixel_dict[pixel_coord] = px[pixel_coord_2]
             img_data.pixel_dict[pixel_coord] = px[pixel_coordinate]
-            print(f"img_data.pixel_dict[pixel_coord]: {img_data.pixel_dict[pixel_coord]}")
+            col_print(f"img_data.pixel_dict[pixel_coord]: {img_data.pixel_dict[pixel_coord]}")
             spaced_y = (spaced_y+img_data.spacing)
             img_data.str_to_coord[str(pixel_coord)] = pixel_coord
 
@@ -54,14 +60,13 @@ class image_data:
     pixel_dict:dict={}
 
     str_to_coord:dict = {}
-
     """[x, y coordinates] = (r, g, b values)"""
 
     def __init__(self):
         pass
 
     def set_file_data(self, base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
-
+        self.too_large = False
         import json
         settings = "rotate_settings.json"
         with open(settings, "r") as settings:
@@ -76,7 +81,7 @@ class image_data:
             self.base_image = base_file
             with Image.open(base_file) as im:
                 width, height = im.size
-                print(f"width, height: {width, height}")
+                col_print(f"width, height: {width, height}")
 
         """ Here need to set a default image size and scale if needed. Spacing etc needs to also change. This is set up for a premade grid, so maybe a whole different one that just goes by x pixels directly. Not sure."""
         self.filename = filename
@@ -87,21 +92,19 @@ class image_data:
         self.height = height
 
         if not self.width or not self.height:
-            print(f"Not self.width or self.height: {self.width} / {self.height}")
+            col_print(f"Not self.width or self.height: {self.width} / {self.height}")
 
         self.dot_radius = dot_radius
         self.spacing_between_edges = spacing_between
 
         self.spacing = int(dot_radius/2) + spacing_between + int(dot_radius/2)
-
         """
 |  |   |   |   |   |  |
 
-"""
-    #else:
+        """
         target_x, target_y = eval(self.default_screen_size)
         target_x = int(target_x/2)
-        target_y = int(target_y/2)
+        target_y = int(target_y/2) # arbitrarily, img is half the screen size. Will figure a better way of doing it. Maybe an interim screen for image selection before the grid is generated, and the region area is defined then?
         if abs(target_x - width) > 100 or abs(target_y - height) > 100:
             print("IMAGE IS THE WRONG SIZE.")
             width_diff = abs(target_x - width)
@@ -116,15 +119,16 @@ class image_data:
                 new_im.paste(im)
                 new_im.save(self.filename, format="png")
                 img_data.base_image = self.filename
+                print(f"Base image saved at: {self.filename}")
 
         self.width = target_y
         self.height = target_y
-        print(f"width at end: {self.width}")
-        print(f"height at end: {self.height}")
+        col_print(f"width at end: {self.width}")
+        col_print(f"height at end: {self.height}")
         self.spacing = int(self.width / self.grid_size)
         self.dot_radius = int((self.spacing-5)/2)
         self.spacing_between_edges = int(self.spacing - self.dot_radius)
-        print(f"self.dot_radius/spacing_between edges: {self.dot_radius} / {self.spacing_between_edges}")
+        col_print(f"self.dot_radius/spacing_between edges: {self.dot_radius} / {self.spacing_between_edges}")
 
 
     def get_child_dict(self):
@@ -326,6 +330,7 @@ def make_starting_image():
             draw.circle(coordinate, radius=32, fill=pixel_value, outline=(0,0,0))
 
         im.save(img_data.filename, "PNG")
+        print(f"Starting image made: {img_data.filename}")
 
 def select_coords(column:int=2, row:int=2):
     selected_coord = (base_pos.coord_dict["columns"][column], base_pos.coord_dict["rows"][row])
