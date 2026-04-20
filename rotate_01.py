@@ -50,17 +50,17 @@ def get_point_spacing():
 
 class image_data:
 
-    use_images_not_colours:bool = False#True # try to use tiled images instead of colours (not implemented)
+    use_images_not_colours:bool = True # try to use tiled images instead of colours (not implemented)
     base_image:str=None
     filename:str=None
     is_fullscreen:bool = True
-    default_screen_size:tuple = ()
 
-    grid_size = 5
+    grid_size = 6
+    region_size:tuple = (640, 480)
     difficulty = 1
     background_colour = "maroon"
-    default_screen_size = (640, 480)
     is_fullscreen = True
+    padding = 5
 
     width:int=None
     height:int=None
@@ -87,7 +87,7 @@ class image_data:
         self.grid_size = settings_data["grid_size"]
         self.difficulty = settings_data["difficulty"]
         self.background_colour = settings_data["background_colour"]
-        self.default_screen_size = settings_data["screen_size"]
+        self.region_size = settings_data["screen_size"]
         self.is_fullscreen = settings_data["fullscreen"]
 
         if base_file:
@@ -117,7 +117,7 @@ class image_data:
 
         self.spacing = int(dot_radius/2) + spacing_between + int(dot_radius/2)
 
-        target_x, target_y = eval(self.default_screen_size)
+        target_x, target_y = eval(self.region_size)
         target_x = int(target_x/2)
         target_y = int(target_y/2) # arbitrarily, img is half the screen size. Will figure a better way of doing it. Maybe an interim screen for image selection before the grid is generated, and the region area is defined then?
         if abs(target_x - width) > 100 or abs(target_y - height) > 100:
@@ -203,23 +203,23 @@ class base_positions:
             for child in children:
                 #print(f"Child in children: {child}")
                 x, y = child
-                if x == point_x and y < point_y:
+                if x == point_x and y == (point_y-1):
                     self.ordered_children[point]["top"] = child
 
-                elif x == point_x and y > point_y:
+                elif x == point_x and y == (point_y+1):
                     self.ordered_children[point]["bottom"] = child
 
-                elif x > point_x and y == point_y:
+                elif x == (point_x + 1) and y == point_y:
                     self.ordered_children[point]["right"] = child
 
-                elif x < point_x and y == point_y:
+                elif x == (point_x - 1) and y == point_y:
                     self.ordered_children[point]["left"] = child
                 else:
                     print(f"Coord is not top/bottom/left/right of {point}: {child}\ncoord x: {x}, main_point x: {point_x}")
 
             #print(f"self.ordered_children[point]: {self.ordered_children[point]}")
             self.ordered_children[point] = self.order_children(self.ordered_children[point])
-        print(f"self.ordered_children[point]: {self.ordered_children[point]}")
+        #print(f"self.ordered_children[point]: {self.ordered_children[point]}")
 
 
     def print_all_coords(self):
@@ -400,36 +400,40 @@ def clean_colours():
 
 def generate_children(coords_list):
     child_dict = {}
-    base_pos.coords_list = coords_list
+    #base_pos.coords_list = coords_list
     for entry in coords_list:
         row, column = entry
         child_points = list((x, y) for (x, y) in coords_list if (((x == (row + 1) or x == (row - 1)) and (y == column))) or (x == row and (y == (column + 1) or y == (column - 1))))# + spacing) or y == (spaced_y - spacing)))
-        print(f"Central: {entry}\nChild points: {child_points}")
+        #print(f"Central: {entry}\nChild points: {child_points}")
         child_dict[entry] = child_points
-    print(f"child_dict: {child_dict}")
+    #print(f"child_dict: {child_dict}")
     return child_dict
 
 def initial_setup(base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
 
     if img_data.use_images_not_colours:
         print(f"use images not colours {img_data.use_images_not_colours}")
-        if img_data.new_img_data:
-            print("new_img_data found")
-            base_file, coord_to_img_files, coords_list = img_data.new_img_data
+        if img_data.new_img_data and img_data.new_img_data[0] == base_file:
+            print(f"new_img_data found for base file `{base_file}`: {img_data.new_img_data[0]}")
+            base_file, coord_to_img_files, coords_list, image_size = img_data.new_img_data
         else:
+            print(f"new_img_data not found for initial setup for base file {base_file}")
             from img_manipulation import generate_img_grid
-            base_file, coord_to_img_files, coords_list = generate_img_grid(base_file)
+            print("Giong to generate_img_grid from ln422")
+            base_file, coord_to_img_files, coords_list, image_size = generate_img_grid(base_file, img_data.region_size, grid_size=img_data.grid_size)
+            img_data.new_img_data = base_file, coord_to_img_files, coords_list, image_size
 
         #clean_colours()
+        print(f"COORDS LIST before generate children: {coords_list}\n")
         child_dict = generate_children(coords_list)
         #child_dict = get_img_children(coord_to_img_files)
 
-    else:
+    """else:
     ## Now here, both routes to restart with an image go through img_manip first. So instead of getting the dict here, it should go through the dict already made in img_manip.
         img_data.set_file_data(base_file, filename, width, height, dot_radius, spacing_between)
         get_point_spacing()
         clean_colours()
-        child_dict = img_data.get_child_dict()
+        child_dict = img_data.get_child_dict()"""
 
     base_pos.set_dicts(child_dict)
 
@@ -446,7 +450,8 @@ def start_gui():
 
 def main(base_image=base_image):
 
-    initial_setup(base_file=base_image, filename = "image_name_for_testing.png")
+    output_filename = f"{base_image.replace(".png", "").split("/")[-1]}_output.png"
+    #initial_setup(base_file=base_image, filename = output_filename)
 
     test_all=False#True
     if test_all:

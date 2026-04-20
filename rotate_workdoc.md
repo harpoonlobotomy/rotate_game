@@ -37,3 +37,25 @@ Might just run two entirely separate paths for this afternoon, one that uses ima
 4.17pm
 Getting there.
 Have the data now  to set the grid size by available space, and to make image-buttons. Just need to do it now. But a rest first, exhausted.
+
+9:24am 20/4/26
+Notes:
+- turn image effects on/off
+- set grid size within game
+- 'set image' should set start_screen=False, not just gallery selection
+- 'add to gallery' button for images set
+- need background image behind buttons
+
+I can't see how to add a background image to the button grid. Might have to go back to my original idea of using button backgrounds, though I'm not sure if those can be images. Goddamn.
+
+10.59pm
+Have to shift to a sg.Graph version, I just don't think I can get it to work with the current columns/buttons. Doesn't seem to a functioning background option, and the only other way is to add the inbetween slivers as separate canvases, and that feels like a godawful 'solution'. So, graph it is. Have a working test graph in a separate script with faux buttons so the concept is sound enough.
+
+3.54pm
+Decent progress made, the grid is now in place and is clickable but the children aren't implemented yet.
+Also there seems to be a sub-pixel misalignment; the lower buttons seem to move down extremely slightly and the very top ones seem to move the other way.  Need to make sure I'm storing position boxes as cleaned values so that's minimised.
+
+5.07pm
+Graph is basically working now. Rotation works as before, but now the 'buttons' have proper surrounds. There's no darkening when it's clicked which is unfortunate, but overall it works.
+
+Currently no resolution for images with extremely similar image-tiles (eg an image with a uniform background), it currently requires the current image to be the target image.
