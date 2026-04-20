@@ -62,3 +62,9 @@ Currently no resolution for images with extremely similar image-tiles (eg an ima
 
 7.41pm
 scramble works again, as do hints.
+
+7.54pm
+The rotation is going the wrong way. No wonder I was struggling.
+
+10.03pm
+improved the ui some.

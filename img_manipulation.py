@@ -246,25 +246,26 @@ class image_manip_data: # at some point combine this with img_data but for now t
         self.base_img_width = im.size[0]
         self.base_img_height = im.size[1]#height
 
-        if self.img_region_height != self.base_img_height:
-            print(f"Image region is {self.img_region_height} but the image is {self.base_img_height}")
+        #if self.img_region_height != self.base_img_height:
+            #print(f"Image region is {self.img_region_height} but the image is {self.base_img_height}")
         if not self.base_img_width or not self.base_img_height:
             print(f"Not self.width or self.height: {self.base_img_width} / {self.base_img_height}/ exiting, can't handle this yet.")
             exit()
 
         """
         So instead of the below, maybe I check to see whether w or h is closer to region dimensions (or which exceeds by more) and scale by that. Would make more sense. Currently the whole grid setup is expecting strictly squares, but I think it should be pretty straightforward to change it? I think....
-        """
         #target_x = int(target_x/2)
         #target_y = int(target_y/2) # arbitrarily, img is half the screen size. Will figure a better way of doing it. Maybe an interim screen for image selection before the grid is generated, and the region area is defined then?
-        if abs(self.img_region_width - width) > 100 or abs(self.img_region_height - height) > 100:
+        #if abs(self.img_region_width - width) > 100 or abs(self.img_region_height - height) > 100:
             #print("IMAGE IS THE WRONG SIZE.")
-            width_diff = abs(self.img_region_width - width)
+            #width_diff = abs(self.img_region_width - width)
             #print(f"Width diff: {width_diff}")
-            height_diff = abs(self.img_region_height - height)
+            #height_diff = abs(self.img_region_height - height)
             #print(f"Height diff: {height_diff}")
             #if width_diff > height_diff:
-                #print("Is more wrong in width than height. How/why does this matte? No idea.")
+                #print("Is more wrong in width than height. How/why does this matter? No idea.")
+        """
+
         with Image.open(base_file) as im:
             im = im.resize(size=(int(self.img_region_height*.8), int(self.img_region_height*.8)))
             with Image.new("RGBA", size=(int(self.img_region_height*.8), int(self.img_region_height*.8))) as new_im:
@@ -278,8 +279,8 @@ class image_manip_data: # at some point combine this with img_data but for now t
         self.spacing = int(self.base_img_width / self.grid_size)
         #self.dot_radius = int((self.spacing-5)/2) ## want to remove the 'radius' here entirely. If we're going to be outputting dot representations of the img, it should be defined by the dimensions, not hardcoded like this. This was just because I had a starting image to figure out how it'd work, not because it was a good idea.
         #self.spacing_between_edges = int(self.spacing - self.dot_radius)
-        print(f"width at end: {self.base_img_width}")
-        print(f"height at end: {self.base_img_height}")
+        #print(f"width at end: {self.base_img_width}")
+        #print(f"height at end: {self.base_img_height}")
 
     def _get_pixel_data(self, im):
         """Pixel data as a sequence of (r,g,b,a) tuples. Works on Pillow < 12.1 (getdata) and >= 12.1 (get_flattened_data)."""
@@ -365,13 +366,13 @@ class image_manip_data: # at some point combine this with img_data but for now t
 
     def extract_tiles(self, im: Image, col_width: int, row_height: int, padding: int):
         im_width, im_height = im.size
-        print(f"im.size in extract: {im.size}")
+        #print(f"im.size in extract: {im.size}")
         cols = int(im_width / col_width)
         rows = int(im_height / row_height)
         if not cols.is_integer(): raise ValueError("column width must be a factor of the total image width")
         if not rows.is_integer(): raise ValueError("row height must be a factor of the total image height")
         rows, cols = int(rows), int(cols)
-        print(f"[in extract_tiles]  cols: {cols} // rows: {rows}")
+        #print(f"[in extract_tiles]  cols: {cols} // rows: {rows}")
         outputs = []
         output_dict = {}
         for i in range(0, rows):
@@ -455,7 +456,7 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
 
     import os
     im = Image.open(image_path)
-    print(f"im.size on opening for `{image_path}`: `{im.size}` f")
+    #print(f"im.size on opening for `{image_path}`: `{im.size}` f")
     img_manip_data.img_size = im.size
     name, ext = os.path.splitext(image_path)
     name = os.path.basename(name)
@@ -471,8 +472,8 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
     img_manip_data.img_size = im.size
     col_width = int(im.size[0] / cols)
     row_height = int(im.size[1] / rows)
-    print(f"col w and h just before extract_tiles: {col_width} / {row_height}")
-    print(f" cols: {cols} // rows: {rows}")
+    #print(f"col w and h just before extract_tiles: {col_width} / {row_height}")
+    #print(f" cols: {cols} // rows: {rows}")
     image_dict = {"incoming_filename": image_path, "image_size": im.size, "col_width": col_width, "row_height": row_height, "padding": padding}
     outputs = img_manip_data.extract_tiles(im, col_width, row_height, padding)
     #print(f"OUTPUTS: {outputs}")
@@ -485,7 +486,7 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
             item.save(outp_path) # final file outputs
 
     else: # assume we manipulate the image and reassemble"""
-    print(f"Image size before sending to merge_tiles: `{im.size}`")
+    #print(f"Image size before sending to merge_tiles: `{im.size}`")
     new_image, coord_to_img_files, coords_list = img_manip_data.merge_tiles(output_path=image_path, outputs=outputs, image_size=im.size, manipulate=effects, subtlety = 1, save_single=True, col_width=col_width, row_height=row_height)
     return new_image, coord_to_img_files, coords_list, im.size
     """  coord_to_img_files: [row_no][column_no]["tile_filename.png"]  """

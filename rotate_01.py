@@ -58,7 +58,6 @@ class image_data:
     grid_size = 6
     region_size:tuple = (640, 480)
     difficulty = 1
-    background_colour = "maroon"
     is_fullscreen = True
     padding = 5
 
@@ -412,19 +411,18 @@ def generate_children(coords_list):
 def initial_setup(base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
 
     if img_data.use_images_not_colours:
-        print(f"use images not colours {img_data.use_images_not_colours}")
         if img_data.new_img_data and img_data.new_img_data[0] == base_file:
-            print(f"new_img_data found for base file `{base_file}`: {img_data.new_img_data[0]}")
+            #print(f"new_img_data found for base file `{base_file}`: {img_data.new_img_data[0]}")
             base_file, coord_to_img_files, coords_list, image_size = img_data.new_img_data
         else:
-            print(f"new_img_data not found for initial setup for base file {base_file}")
+            #print(f"new_img_data not found for initial setup for base file {base_file}")
             from img_manipulation import generate_img_grid
-            print("Giong to generate_img_grid from ln422")
+            #print("Giong to generate_img_grid from ln422")
             base_file, coord_to_img_files, coords_list, image_size = generate_img_grid(base_file, img_data.region_size, grid_size=img_data.grid_size)
             img_data.new_img_data = base_file, coord_to_img_files, coords_list, image_size
 
         #clean_colours()
-        print(f"COORDS LIST before generate children: {coords_list}\n")
+        #print(f"COORDS LIST before generate children: {coords_list}\n")
         child_dict = generate_children(coords_list)
         #child_dict = get_img_children(coord_to_img_files)
 
