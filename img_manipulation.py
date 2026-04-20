@@ -123,6 +123,11 @@ def histograms(filename):
         histograms["green"].save("histogram_green.png", "PNG")
         histograms["blue"].save("histogram_blue.png", "PNG")
 
+def make_square(cell_w, colour, padding):
+    new_image = Image.new("RGB", (cell_w-(padding*2)-4, cell_w-(padding*2)-4), colour) # is -4 here to compensate for the -2 of placement. But it shouldn't be an int like this, it should be defined by padding. Hm. #TODO
+    new_image.save(f"{colour}_square.png", "PNG")
+    return f"{colour}_square.png"
+
 class image_manip_data: # at some point combine this with img_data but for now they're separate because I'm tired
 
     base_image:str=None

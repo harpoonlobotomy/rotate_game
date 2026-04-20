@@ -59,3 +59,6 @@ Also there seems to be a sub-pixel misalignment; the lower buttons seem to move 
 Graph is basically working now. Rotation works as before, but now the 'buttons' have proper surrounds. There's no darkening when it's clicked which is unfortunate, but overall it works.
 
 Currently no resolution for images with extremely similar image-tiles (eg an image with a uniform background), it currently requires the current image to be the target image.
+
+7.41pm
+scramble works again, as do hints.
