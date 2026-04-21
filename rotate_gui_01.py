@@ -1,7 +1,12 @@
-
 import FreeSimpleGUI as sg
 
-def col_print(string):
+def logger(string):
+
+    logging = False#True
+    if logging == True:
+        print(string)
+
+def extra_print(string):
     print_col_prints = False
     if print_col_prints:
         print(string)
@@ -9,6 +14,7 @@ def col_print(string):
 class theme_data():
 
     def __init__(self):
+        logger("initing theme_data")
         pass
 
     theme_dict:dict = {
@@ -66,25 +72,39 @@ def get_col_from_col_code(red, green, blue):
     """col_code is a tuple from pixel_dict, returns a "#FFFFFFF" style value."""
     return '#%02x%02x%02x' % (red, green, blue)
 
+class buttonInstance:
+
+    def __init__(self, coords):
+        if isinstance(coords, str):
+            print("COORDS GIVEN AS A STRING")
+            return#coords = b.pixel_to_coord[coords]
+        self.coords = coords
+        """buttonInstance.coords == tuple"""
+        #self.str_coords = str(coords)
+        self.target_image = b.clean_dict[coords]["target_image"]
+        self.current_image = self.target_image
+
+
+    def __repr__(self):
+        return f"self.coords: {self.coords}  self.current_image: {self.current_image}  self.target_image: {self.target_image}"
+
+    def change_image(self, new_image):
+        self.current_image = new_image
+
 class buttonClass:
 
     def __init__(self):
-        self.coord_to_colour:dict = {} # just a 'grid coordinate to current colour' shortcut.
-        self.coord_to_pixel:dict = {}
-        #self.pixel_to_coord:dict = {}
-        #self.str_to_tuple:dict = {}
-        self.row_dict:dict = {}
+        logger("initing buttonClass")
         self.row_column_dict:dict = {}
         self.buttons:set = set()
-        self.by_coord:dict[tuple: self.buttonInstance] = {}
-        #self.prepared_children:dict = {}
+        self.by_coord:dict[tuple: buttonInstance] = {}
+        """self.by_coord : [tuple coords] = <buttonInstance>"""
         self.clean_dict:dict = {} # for the post-converted '36,36' > '0,0' / '121,36' > '1, 0'
-        """ self.clean_dict[coord] = {"pixel_coords": pix_coord, "children": {"top": (1,0)}, "target_colour": get_col_from_col_code(img_data.pixel_dict[(x_val, y_val)])} """
 
 
     def img_from_coords(button, row, column):
         """row_{row}_col_{column}.png"""
-
+        logger(f"img_from_coords {button}/{row}/{column}")
         if button and isinstance(button, buttonClass.buttonInstance):
             row, column = button.coords
         elif button and isinstance(button, tuple):
@@ -97,45 +117,10 @@ class buttonClass:
             return img_filename
         else:
             print(f"No row/column found from `button` : {button} / `row` : {row} / `column` : {column}")
-    def colour_from_coords(self, coords, is_base=False, img_data=None):
 
-        if isinstance(coords, str):
-            print(f"COORDS GIVEN AS STRING: {coords}")
-            return
+    def button_press(self, coord:buttonInstance, base_pos):
+        logger(f"BUTTON PRESS: {coord}")
 
-        if self.by_coord.get(coords):
-            if not is_base:
-                return self.by_coord[coords].current_colour
-            else:
-                return self.by_coord[coords].target_colour
-
-        #elif self.clean_dict.get(coords) and self.clean_dict[coords].get("target_colour"):
-            #return self.clean_dict[coords]["target_colour"]
-
-        else:
-            print(f"Failed to get colour from {coords}, type: {type(coords)}")
-
-    class buttonInstance:
-
-        def __init__(self, coords):
-            if isinstance(coords, str):
-                print("COORDS GIVEN AS A STRING")
-                return#coords = b.pixel_to_coord[coords]
-            self.target_image = b.clean_dict[coords]["target_image"]
-            self.coords = coords
-            self.str_coords = str(coords)
-            self.current_image = self.target_image
-
-        def __repr__(self):
-            return f"self.coords: {self.coords}  self.current_image: {self.current_image}  self.target_image: {self.target_image}"
-
-        def change_image(self, new_image):
-            self.current_image = new_image
-            pass
-
-    def button_press(self, coord:buttonInstance, base_pos, img_data):
-
-        print(f"BUTTON PRESS: {coord}")
         rotated_children = {}
         if isinstance(coord, str) or isinstance(coord, tuple):
             if isinstance(coord, str):
@@ -147,8 +132,7 @@ class buttonClass:
         for child in children:
             orig_index = list(children).index(child)
             new_index = list(reordered).index(child)
-            rotated_children[list(children)[new_index]] = (children[list(children)[orig_index]], b.by_coord[str(children[list(children)[new_index]])].current_image)#), img_data))
-
+            rotated_children[list(children)[orig_index]] = (children[list(children)[new_index]], b.by_coord[children[list(children)[orig_index]]].current_image)
         return rotated_children
 
     """
@@ -161,11 +145,7 @@ So, setup stage for buttons:
 """
 
     def set_up_buttons(self, base_pos, img_data):
-        #from rotate_01 import base_positions, image_data
-        base_pos
-        img_data
-        """   ! button_key_dict == self.row_dict
-        self.row_dict: {0: ['(36, 36)', '(121, 36)', '(206, 36)', '(291, 36)', '(376, 36)'], 1: ['(36, 121)', '(121, 121)', '(206, 121)', '(291, 121)', '(376, 121)'], 2: ['(36, 206)', '(121, 206)', '(206, 206)', '(291, 206)', '(376, 206)'], 3: ['(36, 291)', '(121, 291)', '(206, 291)', '(291, 291)', '(376, 291)'], 4: ['(36, 376)', '(121, 376)', '(206, 376)', '(291, 376)', '(376, 376)']}"""
+        logger("set_up_buttons")
 
         def get_children():
 
@@ -179,10 +159,11 @@ So, setup stage for buttons:
                 self.clean_dict[entry]["children"] = cleaned_children[entry]
 
         def make_row_column_dict():
-
+            logger("make_row_column_dict")
             if not img_data.new_img_data:
                 print(f"No new_img_data: {img_data.new_img_data}")
                 return
+
             if img_data.new_img_data:
                 print("new_img_data found")
 
@@ -191,54 +172,30 @@ So, setup stage for buttons:
                 img_data.coords_list = coords_list
                 img_data.coord_to_img_files = coord_to_img_files
 
-                #self.filename_to_coords = {}
-                #self.coords_to_filename = {}
                 for row_no in coord_to_img_files:
                     self.row_column_dict[row_no] = dict()
                     for col_no in coord_to_img_files[row_no]:
                         filename = coord_to_img_files[row_no][col_no]
                         self.row_column_dict[row_no][col_no] = filename
-                        #self.filename_to_coords[filename] = (row_no, col_no)
-                        #self.coords_to_filename[row_no, col_no] = (filename)
-                        #b.str_to_tuple[f"{row_no, col_no}"] = (row_no, col_no)
-                    #for col_no, y_val in base_pos.coord_dict["columns"].items():#coord dict: {'rows': {0: 36, 1: 121, 2: 206, 3: 291, 4: 376}, 'columns': {0: 36, 1: 121, 2: 206, 3: 291, 4: 376}}
-                        """
-                        coord = (x_val, y_val)
-                        pix_coord = f"{(x_val, y_val)}"
-                        self.pixel_to_coord[pix_coord] = coord
-                        self.coord_to_pixel[coord] = pix_coord"""
-                        #print(f"img_data.pixel_dict[(x_val, y_val) for pix_coord: {pix_coord} (cord: {coord}): {img_data.pixel_dict[(x_val, y_val)]}")
-                        #print(f"Base positions ordered children: {base_pos.ordered_children}")
                         coord = row_no, col_no
                         self.clean_dict[coord] = {"children": base_pos.ordered_children[(row_no, col_no)], "target_image": filename}
 
                 #print(f"\n\nclean dict: \n\n{self.clean_dict}\n\n")
 
-            """for row_no, x_val in base_pos.coord_dict["rows"].items():
-                self.row_column_dict[x_val] = list()
-                for col_no, y_val in base_pos.coord_dict["columns"].items():#coord dict: {'rows': {0: 36, 1: 121, 2: 206, 3: 291, 4: 376}, 'columns': {0: 36, 1: 121, 2: 206, 3: 291, 4: 376}}
-                    self.row_column_dict[x_val].append(y_val)
-                    coord = (x_val, y_val)
-                    pix_coord = f"{(x_val, y_val)}"
-                    self.pixel_to_coord[pix_coord] = coord
-                    self.coord_to_pixel[coord] = pix_coord
-                    #print(f"img_data.pixel_dict[(x_val, y_val) for pix_coord: {pix_coord} (cord: {coord}): {img_data.pixel_dict[(x_val, y_val)]}")
-                    colour = img_data.pixel_dict[coord]
-                    self.clean_dict[coord] = {"pixel_coords": pix_coord, "children": base_pos.ordered_children[(x_val, y_val)], "target_colour": colour}
-                    self.coord_to_colour[coord] = colour
-            print(f"\n\nclean dict: \n\n{self.clean_dict}\n\n")"""
-
+            extra_print(f"\n\nclean dict: \n\n{self.clean_dict}\n\n")
+        logger("going to make_row_column_dict from set_up_buttons")
         make_row_column_dict()
-        get_children()
+        #removed get_children because it literally added nothing, just redid 'children' though it was already fully done.
 
 b = buttonClass()
 
-def splash_window(img_data):
+def splash_window():
+    logger("splash window")
     """Using the splash screen to get the size of the maximised window"""
 
     splashscreen_panel = [
         [sg.Canvas(size=(500,2), pad=2)],
-        [sg.Text(text="\n ***••.  SCRAMBLE  .••*** \n", expand_x=True, expand_y=True, text_color=theme_data().theme_dict[sg.theme()]["gold_text"], justification="center")]
+        [sg.Text(text="\n ***••.  SCRAMBLE  .••*** \n", expand_x=True, expand_y=True, text_color=t.theme_dict[sg.theme()]["gold_text"], justification="center")]
         ]
 
     splashscreen_main = [
@@ -266,9 +223,7 @@ def splash_window(img_data):
 
 
 def main_window(img_data, base_pos):
-    from rotate_01 import base_pos, base_positions, img_data, image_data
-    base_pos:base_positions
-    img_data:image_data
+    logger("main_window of rotate_gui_01")
     sg.theme(t.theme_name)
 
     gallery_list = ["testing/lex.png", "rave_shaman.png"]
@@ -333,35 +288,39 @@ def main_window(img_data, base_pos):
             print("No incorrect buttons to highlight.")
             return
 
-        saved_colours = {}
         from time import sleep
         for button in incorrect_buttons:
             button:buttonClass.buttonInstance
-            saved_colours[button] = button.current_image
             x, y = button.coords
-            if not g.white_square:
+            if fix_incorrect:
+                white_square = g.white_square
+            else:
+                white_square = g.white_w_transparency
+
+            if not white_square:
                 from img_manipulation import make_square
-                g.white_square = make_square(g.cell_w, "white", g.padding)
+                white_square = make_square(g.cell_w, "white", g.padding, transparent_centre=True if not fix_incorrect else False)
+                if fix_incorrect:
+                    g.white_square = white_square
+                else:
+                    g.white_w_transparency = white_square
 
             button_box = coord_dict[x][y]
-            g.grid.draw_image(filename=g.white_square, location = (button_box[0][0]+(g.padding/2)+2, button_box[0][1]+(g.padding/2)+2))
+            g.grid.draw_image(filename=white_square, location = (button_box[0][0]+(g.padding/2)+2, button_box[0][1]+(g.padding/2)+2))
             unpressed_button(button_box[0], button_box[1])
-            #update_clicked_square(x, y, g.white_square, click_off=True)
-            #window[str(button.coords)].update(button_color=("black", "white"))
+
             window.refresh()
             sleep(.05)
 
-        #print(f"Saved colours: {saved_colours}")
-        #window["button_grid"].update()
         window.refresh()
         sleep(.5)
 
         for button in incorrect_buttons:
+            button:buttonInstance
             if fix_incorrect:
                 new_image = button.target_image
             else:
-                new_image = saved_colours[button]
-            button:buttonClass.buttonInstance
+                new_image = button.current_image
             x, y = button.coords
             update_clicked_square(x, y, new_image, click_off=True)
             #window[str(button.coords)].update(button_color=("black", saved_colours[button]))
@@ -370,7 +329,7 @@ def main_window(img_data, base_pos):
         window.refresh()
 
             #restore_colour =
-    def set_solved(img_data):
+    def set_solved():
         show_incorrect(fix_incorrect=True)
 
 
@@ -378,20 +337,13 @@ def main_window(img_data, base_pos):
 
         for _, child_coords in rotated_children.items():
             child_coords, child_image = child_coords
-            #print(f"[rotate_children]  child_coords: {child_coords} / child_colour: {child_image}")
-            #pixel_value = img_data.pixel_dict[child_coords]
-            #if img_data.pixel_dict[child_coords] == child_colour:
-                #a, b, c = child_colour
-                #child_colour = tuple((a+45, b+45, c+45))
-            #if update:
-                #window[str(child_coords)].update(image_source = child_colour)#get_col_from_col_code(child_colour)))
-            b.by_coord[f"{child_coords}"].change_image(child_image)
-            #print(f"b.by_coord[f'{child_coords}']: {b.by_coord[f'{child_coords}']}")
+            b.by_coord[child_coords].change_image(child_image)
+
             row, column = child_coords
             update_clicked_square(row, column, child_image, click_off=True)
 
     def scramble_colours():
-
+        logger("scramble_colours")
         window["click_counter"].update("\nGood luck!")
 
         points_to_rotate = {
@@ -403,14 +355,15 @@ def main_window(img_data, base_pos):
         no_of_rotations = points_to_rotate[str(t.difficulty)] # thinking instead of difficulty defining rotations, it's grid size. Or possible both. Advanced mode where you can set no of rotations _ grid size probably. But for now, difficulty=grid size.
         # So instead of that... what, always 2/3rds of the grid? That feels like an advanced setting option too. At least half. I like the idea of at least some being in the right place.
 
-
         import random
         from time import sleep
-
-        number_of_clicks = random.randint(1,3)
-        buttons_to_click = random.choices(population=list(b.by_coord), k=int(len(b.by_coord)/2))
+        if img_data.rotations_count:
+            number_of_clicks = img_data.rotations_count
+        else:
+            number_of_clicks = random.randint(1,3)
+        buttons_to_click = random.choices(population=list(b.by_coord), k=int(len(b.by_coord)/3))
         for button in buttons_to_click:
-            rotated_children = b.button_press(button, base_pos, img_data)
+            rotated_children = b.button_press(button, base_pos)
             if number_of_clicks > 1:
                 for _ in range(number_of_clicks-1):
                     rotate_children(rotated_children, update=False)
@@ -427,9 +380,14 @@ def main_window(img_data, base_pos):
     if not img_data.start_screen:
 
         def make_button(coord):
-            button_inst = b.buttonInstance(coord)
+            button_inst = buttonInstance(coord)
             b.buttons.add(button_inst)
-            b.by_coord[f"{coord}"] = button_inst
+            b.by_coord[coord] = button_inst
+
+    else:
+        b.by_coord = {} # actively remove those references if not start_screen (eg when changing grid sizes when in a puzzle)
+        b.buttons = set()
+
 
     #theme.background_colour = img_data.background_colour
 
@@ -437,11 +395,10 @@ def main_window(img_data, base_pos):
     class gridClass:
 
         def __init__(self, region_size, grid_size):
-
+            logger("init gridClass")
             #self.new_grid = True
             self.region_size = 600,600
             self.width, self.height = region_size
-            self.grid_size = grid_size
             self.rows = grid_size
             self.cols = grid_size # separate in case I do rectangles later.
             self.cell_w = self.width / self.cols
@@ -455,8 +412,10 @@ def main_window(img_data, base_pos):
             self.coords_list = []
 
             self.white_square:str = None # to use for flashing hints
+            self.white_w_transparency:str = None # to use for flashing hints
 
         def new_image(self, full_img, coord_to_img_files=None, coords_list=None, size=None):#(g.width, g.height)):
+            logger("gridClass new_image")
             """To make sure these are properly reset when the image is selected/changed"""
             if not size:
                 size = (self.width, self.height)
@@ -480,23 +439,26 @@ def main_window(img_data, base_pos):
 
             self.full_img, self.coord_to_img_files, self.coords_list, (self.width, self.height) = full_img, coord_to_img_files, coords_list, size
 
-            from rotate_01 import generate_children
-            self.child_dict = generate_children(self.coords_list)
-            base_pos.child_dict = self.child_dict
-            from rotate_01 import base_positions, image_data
+            #from rotate_01 import generate_children
+            #self.child_dict = generate_children(self.coords_list)
+            #logger("after generate_children in new_image")
+            base_pos.align_children()
+            logger("after align_children in new_image")
+            #from rotate_01 import base_positions, image_data
             b.set_up_buttons(base_pos, img_data)
+            logger("after set_up_buttons in new_image")
 
 
     g = gridClass(region_size=img_data.region_size, grid_size=img_data.grid_size)
 
     def set_up_grid(img_file, img_size):
-
+        logger("set_up_grid")
         padding = 5
         if padding % 2 != 0:
             padding += 1
         g.padding=int(padding)
 
-        g.new_image(img_file, size=img_size)
+        g.new_image(img_file, coord_to_img_files=img_data.new_img_data[1], coords_list=img_data.new_img_data[2], size=img_size)
 
         grid = sg.Graph(
             canvas_size=(g.width, g.height),
@@ -508,9 +470,6 @@ def main_window(img_data, base_pos):
 
         g.grid=grid
 
-        g.full_img, g.coord_to_img_files, g.coords_list, (g.width, g.height) = img_data.new_img_data
-
-        g.new_image(g.full_img, g.coord_to_img_files, g.coords_list, (g.width, g.height)) # just run it again in case anything was resized here? Need to cull so much of this.
         return grid
 
     def unpressed_button(top_left, bottom_right):
@@ -519,16 +478,16 @@ def main_window(img_data, base_pos):
 
 
     def initial_grid_drawing():
-
+        logger("initial_grid_drawing")
         if not g.grid:
             g.grid = set_up_grid(g.full_img, g.region_size)
-        coord_dict = {}
+        tile_bounding_boxes = {}
         g.grid.draw_image(filename=g.full_img, location=(0, 0))
 
         add_button_gap = True
 
         for row in range(0, int(g.width/g.cell_w)):
-            coord_dict[row] = {}
+            tile_bounding_boxes[row] = {}
             for column in range(0, int(g.height/g.cell_h)):
                 if add_button_gap:
                     top_left = g.cell_w*column + (g.padding/2), g.cell_h*row + (g.padding/2)
@@ -538,39 +497,33 @@ def main_window(img_data, base_pos):
                     top_left = g.cell_w*column, g.cell_h*row
                     bottom_right = g.cell_w*(column+1), g.cell_h * (row+1)
                 button_box = top_left, bottom_right
-                coord_dict[row][column] = button_box
+                tile_bounding_boxes[row][column] = button_box
                 make_button((row, column))
             #print(f"top left: {top_left} // bottom right: {bottom_right}")
                 unpressed_button(top_left, bottom_right)
-        return coord_dict
+        return tile_bounding_boxes
 
 
     def update_clicked_square(row, column, new_image=None, click_off=False):
-        #print("COORD DICT: {coord_dict}")
-        #print(f"coord_to_img_files DICT:\n\n{g.coord_to_img_files}\n\n")
-        if row > g.grid_size -1 or column > g.grid_size-1:
+
+        if row > img_data.grid_size -1 or column > img_data.grid_size-1:
             #print(f"Clicked a grid reference that shouldn't exist: {row},{column}. The grid size is {g.grid_size}")
             return
         button_box = coord_dict[row][column]
-        #print(f"ROW: {row} COLUMN: {column} // button box: {button_box}")
+
         if not new_image:
-            if not hasattr(img_data, "coord_to_img_files") or not img_data.coord_to_img_files:
-                filename = g.coord_to_img_files[row][column]
-            else:
-                filename = img_data.coord_to_img_files[row][column]
+            target_button = b.by_coord[(row, column)]
+            filename = target_button.current_image
+
         else:
             filename = new_image
-        # so we make the filename the grid ref image, and it should work, I think.
-        #print(f"FILENAME FOR CLICKED SQUARE [{row}][{column}]: {filename}")
-        #g.grid.draw_image(filename=filename, location = button_box[0])##(button_box[0][0]+2, button_box[0][1]+2))
-        #g.grid.draw_image(filename=filename, location = (button_box[0][0]+(g.padding/2)+1, button_box[0][1]+(g.padding/2)+1))
 
-        #print(f"click_off: {click_off}")
         if click_off:
             g.grid.draw_image(filename=filename, location = (button_box[0][0]+(g.padding/2)+2, button_box[0][1]+(g.padding/2)+2))
             unpressed_button(button_box[0], button_box[1])
         else:
             g.grid.draw_rectangle(top_left=button_box[0], bottom_right=button_box[1], line_color="white", line_width=2)
+
         window["grid"].update()
 
 
@@ -581,18 +534,53 @@ def main_window(img_data, base_pos):
         window["set_perfect"].update(disabled = not enable)
         window["set_gallery"].update(disabled = not enable)
 
+
+    def set_gridsize():
+        new_gridsize = sg.popup_get_text(message=f"Current gridsize is {img_data.grid_size}. Please enter a new gridsize.", title="Enter a new grid size value")
+        if new_gridsize:
+            if len(new_gridsize.strip()) > 2:
+                sg.popup("Please set a reasonable number of grid spaces.")
+            try:
+                new_gridsize = int(new_gridsize.strip())
+                sg.popup(f"New gridsize set to {new_gridsize}. Returning to gallery.")
+                img_data.grid_size = new_gridsize
+                return "success"
+
+            except Exception as e:
+                print(f"Error: {e}")
+
+
+    def set_rotations():
+        new_rotations = sg.popup_get_text(message=f"Current rotations count is {img_data.grid_size}. Please enter a new rotation count.", title="Enter a new rotations count value")
+        if new_rotations:
+            if len(new_rotations.strip()) > 2:
+                sg.popup("Please set a reasonable number of rotations.")
+            try:
+                new_rotations = int(new_rotations.strip())
+                sg.popup(f"New rotations set to {new_rotations}. Changes will take effect next time you load an image or select from gallery.")
+                img_data.rotations_count = new_rotations
+                return new_rotations
+            except Exception as e:
+                print(f"Error: {e}")
+
 ###################################################################################
 
 
     #gallery_source = "manip_testing_2.png" # make a list/dict later and generate from that. this'll do for now.
 
-    def setup_button(text, key=None, size=None, font="courier 12", start_disabled=False, colour=t.button_colour):
+    def setup_button(text, key=None, size=None, font="courier 12", start_disabled=False, colour=t.button_colour, tooltip=None):
         if not key:
             if text:
                 key = f"{text}_key"
 
         if size:
+            if tooltip:
+                return sg.Button(button_text=text, size=size, key=key, use_ttk_buttons=True, auto_size_button=True, font=font, disabled_button_color="gray", disabled=start_disabled, button_color=colour, tooltip=tooltip)
+
             return sg.Button(button_text=text, size=size, key=key, use_ttk_buttons=True, auto_size_button=True, font=font, disabled_button_color="gray", disabled=start_disabled, button_color=colour)
+
+        if tooltip:
+            return sg.Button(button_text=text, key=key, use_ttk_buttons=True, auto_size_button=True, font=font, disabled_button_color="gray", disabled=start_disabled, tooltip=tooltip)
 
         return sg.Button(button_text=text, key=key, use_ttk_buttons=True, auto_size_button=True, font=font, disabled_button_color="gray", disabled=start_disabled)
 
@@ -624,11 +612,6 @@ def main_window(img_data, base_pos):
             [(setup_text("\n - choose an image -\n"))],
             [sg.Canvas(size=(t.screen_x*.66, 20), background_color="black" if debug_colours else t.background_colour)],
             button_yielder(),
-            #[sg.Canvas(size=(1, theme.screen_y), pad=0, background_color="yellow"), sg.Text("Click an image to use it as the base for the puzzle."),
-                #button_yielder()],
-                #(sg.Button(button_text=i, image_filename=i, image_source=i, image_subsample=2, key=f"imgkey_{i}") for i in gallery_list)],
-                #sg.Button(button_text=gallery_source, image_filename=gallery_source, image_source=gallery_source, image_subsample=2, key="imgkey_manip_testing_2.png")],
-                #sg.Image(source="manip_testing_2.png", subsample=2, key="imgkey_manip_testing_2.png")],
             [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
             ]
 
@@ -637,7 +620,7 @@ def main_window(img_data, base_pos):
             [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
             [sg.Canvas(size=(int(t.screen_x*.66), 0), pad=0)],
             [sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour),
-                set_up_grid(img_data.new_img_data, img_data.new_img_data[3]),
+                set_up_grid(img_data.new_img_data[0], img_data.new_img_data[3]),
                 sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour)],
             [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
             ]
@@ -653,14 +636,24 @@ def main_window(img_data, base_pos):
         [sg.HorizontalSeparator()],
         [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
         [setup_button(text=f"Custom image", key="set_image")],
-        #[sg.Button(button_text=f"Custom image", key="set_image", use_ttk_buttons=True, button_color=t.button_colour)],
-        [setup_button(text=f"Difficulty:\n{t.difficulty_legend[t.difficulty]}", key="set_difficulty")],
+        [setup_button(text=f"Difficulty:\n{t.difficulty_legend[t.difficulty]}", key="set_difficulty", tooltip = difficulty_text)],
         [setup_button(text="Show incorrect", key="get_hint", start_disabled=True)],
         [setup_button(text="Start over", key="set_perfect", start_disabled=True)],
         [setup_button(text=f"Return to Gallery", key="set_gallery", start_disabled=True)],
+        [sg.HorizontalSeparator()],
         [setup_button(text="Exit", key="exit")],
         [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
     ]
+
+    adv_settings = [
+        [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+        [sg.HorizontalSeparator()],
+        [setup_button(text=f"Change grid size", key="adv_gridsize")],
+        #[sg.Button(button_text=f"Custom image", key="set_image", use_ttk_buttons=True, button_color=t.button_colour)],
+        [setup_button(text=f"Change number of rotations", key="adv_rotations")],
+        [sg.HorizontalSeparator()],
+        [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
+            ]
 
     text_layout = [
                 [setup_text(text=f"\nWaiting to scramble...\n", key="click_counter")]#, size=(20,4))]
@@ -670,13 +663,20 @@ def main_window(img_data, base_pos):
                   [sg.Column(layout=all_settings, element_justification="center", justification="right", vertical_alignment="center", expand_y=False, background_color="red" if debug_colours else t.background_colour)]
                   ]
 
+    advanced_settings = [
+                  [sg.Column(layout=adv_settings, element_justification="center", justification="right", vertical_alignment="center", expand_y=False, background_color="red" if debug_colours else t.background_colour)]
+                  ]
+
     side_panel = [
                     [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
                     [sg.Frame(title="", layout=[[sg.Frame(title="", layout=side_layout, relief="ridge", border_width=7, pad=50)]], relief="groove", border_width=5, pad=40)],
-                  [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+                  #[sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
                   [sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour),
                     sg.Frame(title="", layout=text_layout, element_justification="center"),
                     sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+                  [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+
+                    [sg.Frame(title="", layout=[[sg.Frame(title="", layout=advanced_settings, relief="ridge", border_width=7, pad=20)]], relief="groove", border_width=5, pad=40)],
                   [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
                   [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
                   ]
@@ -709,7 +709,7 @@ def main_window(img_data, base_pos):
                         ]
 
     window = sg.Window(' •• SCRAMBLE •• ', layout, keep_on_top=False, finalize=True, margins=(3,3), no_titlebar=False, resizable=True, size=(t.screen_x, t.screen_y), return_keyboard_events=True, enable_window_config_events=True, element_justification="center")
-
+    logger("main window init'd")
     last_held_xy = None
     if t.maximise_window:
         window.Maximize()
@@ -735,6 +735,8 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                 g.full_img = selected_imgname
                 g.region_size = region_size
                 g.new_grid = True
+                g.coord_to_img_files = {}
+                g.coords_list = []
                 #img_data.new_img_data = new_image, coord_to_img_files, coord_list, image_size
                 img_data.start_screen=False
                 window.close()
@@ -768,7 +770,7 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                 update_clicks()
                 #event = b.by_coord[event]
                 #event = b.str_to_tuple[last_held_xy]
-                rotated_children = b.button_press(last_held_xy, base_pos, img_data)
+                rotated_children = b.button_press(last_held_xy, base_pos)
                 #print(f"Children to rotate: {rotated_children}")
                 rotate_children(rotated_children)
                 #print(f"Button pressed: {last_held_xy}")
@@ -778,11 +780,26 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                 window.close()
                 return "Done"
 
+            elif event.startswith("adv_"):
+                if event == "adv_gridsize":
+                    if set_gridsize():
+                        if not img_data.start_screen:
+                            window.close()
+                            img_data.start_screen=True
+                            img_data.new_img_data = {}
+                            g.new_grid = True
+                            img_data.region_size = g.region_size
+                            return f"restart"
+
+                if event == "adv_rotations":
+                    if set_rotations():
+                        return "restart"
+
             elif event.startswith("set_"):
                 if event == "set_gallery":
                     window.close()
                     img_data.start_screen=True
-                    return f"restart"
+                    return "restart"
 
                 if event == "set_image":
                     new_img_name = change_image()
@@ -811,11 +828,7 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                 elif event == "set_difficulty":
                     set_difficulty()
                 elif event == "set_perfect":
-                    set_solved(img_data)
-                elif event == "set_use_images_checkbox":
-                    if hasattr(values, event):
-                        img_data.use_images_not_colours = values.get(event)
-
+                    set_solved()
 
             elif event == "get_hint":
                 show_incorrect()

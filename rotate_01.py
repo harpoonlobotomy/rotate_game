@@ -2,6 +2,11 @@
 
 from PIL import Image, ImageDraw
 
+def logger(string):
+    logging = False#True
+    if logging:
+        print(f"[ LOGGER ] `{string}`")
+
 def col_print(string):
     print_col_prints = False
     if print_col_prints:
@@ -10,52 +15,15 @@ def col_print(string):
 
 #base_image = "better_differentiation.png"
 
-def get_point_spacing():
-    """adds pixel_dict to img_data"""
-    if img_data.base_image:
-        with Image.open(img_data.base_image) as im:
-            px = im.load()
-            px_size = im.size
-
-    else:
-        print("No ability to generate images from naught yet, exiting.")
-        exit()
-    # note: (row, column) - so changing the first and not the second goes left>right.
-
-    col_print(f"SPACING: {img_data.spacing}")
-    spaced_x = int(img_data.dot_radius/2)
-
-    for i in range(0, int(img_data.height/img_data.spacing)):
-        col_print(f"img_data.height: {img_data.height} // i: {i}")
-        spaced_y = int(img_data.dot_radius/2)
-
-        for ib in range(0, int(img_data.width/img_data.spacing)):
-            pixel_coord = (i, ib)
-            col_print(f"PIXEL COORD: {pixel_coord}\nwidth: {img_data.width}, height: {img_data.height}")
-            if (spaced_y > img_data.width) or (spaced_x > img_data.height):
-                continue
-            pixel_coord_2 = (spaced_x, spaced_y)
-            img_x, img_y = px_size
-            pixel_coordinate = ((i * img_data.spacing), (ib * img_data.spacing))
-            col_print(f"px[pixel_coord_2: {px[pixel_coord_2]}]")
-            col_print(f"pixel_coordinate: {pixel_coordinate}]")
-            col_print(f"pixel_coord_2: {pixel_coord_2}]")
-            #img_data.pixel_dict[pixel_coord] = px[pixel_coord_2]
-            img_data.pixel_dict[pixel_coord] = px[pixel_coordinate]
-            col_print(f"img_data.pixel_dict[pixel_coord]: {img_data.pixel_dict[pixel_coord]}")
-            spaced_y = (spaced_y+img_data.spacing)
-            img_data.str_to_coord[str(pixel_coord)] = pixel_coord
-
-        spaced_x = spaced_x + img_data.spacing
-
 class image_data:
-
+    logger("start of image_data class (has no def init)")
     use_images_not_colours:bool = True # try to use tiled images instead of colours (not implemented)
     base_image:str=None
     filename:str=None
     is_fullscreen:bool = True
 
-    grid_size = 6
+    grid_size = 5
+    rotations_count:int = None
     region_size:tuple = (640, 480)
     difficulty = 1
     is_fullscreen = True
@@ -69,88 +37,13 @@ class image_data:
     start_screen=True # True if need to show the 'gallery' intro panel
     new_img_data:tuple[str, dict] = ()#new_image, coord_to_img_files # sending back from window so it's stored somewhere during the restart of window. bad way of doing it but sleep dep
 
-    str_to_coord:dict = {}
     """[x, y coordinates] = (r, g, b values)"""
 
     def __init__(self):
         pass
 
-    """def set_file_data(self, base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
-        self.too_large = False
-        import json
-        settings = "rotate_settings.json"
-        with open(settings, "r") as settings:
-            settings_data = json.load(settings)
-
-        self.grid_size = settings_data["grid_size"]
-        self.difficulty = settings_data["difficulty"]
-        self.background_colour = settings_data["background_colour"]
-        self.region_size = settings_data["screen_size"]
-        self.is_fullscreen = settings_data["fullscreen"]
-
-        if base_file:
-            print(f"BASE FILE: {base_file}, type: {type(base_file)}")
-            if isinstance(base_file, Image.Image):
-                print(f"DIR base_file: {dir(base_file)}")
-                width, height = im.size
-            else:
-                with Image.open(base_file) as im:
-                    width, height = im.size
-                self.base_image = base_file
-                col_print(f"width, height: {width, height}")
-
-        """# Here need to set a default image size and scale if needed. Spacing etc needs to also change. This is set up for a premade grid, so maybe a whole different one that just goes by x pixels directly. Not sure.
-    """
-        self.filename = filename
-
-    #if filename != "image_name_for_testing.png":
-
-        self.width = width
-        self.height = height
-
-        if not self.width or not self.height:
-            col_print(f"Not self.width or self.height: {self.width} / {self.height}")
-
-        target_x, target_y = eval(self.region_size)
-        target_x = int(target_x/2)
-        target_y = int(target_y/2) # arbitrarily, img is half the screen size. Will figure a better way of doing it. Maybe an interim screen for image selection before the grid is generated, and the region area is defined then?
-        if abs(target_x - width) > 100 or abs(target_y - height) > 100:
-            print("IMAGE IS THE WRONG SIZE.")
-            width_diff = abs(target_x - width)
-            print(f"Width diff: {width_diff}")
-            height_diff = abs(target_y - height)
-            print(f"Height diff: {height_diff}")
-            if width_diff > height_diff:
-                print("Is more wrong in width than height. How/why does this matte? No idea.")
-        with Image.open(base_file) as im:
-            im = im.resize(size=(target_y, target_y))
-            with Image.new("RGBA", size=(target_y, target_y)) as new_im:
-                new_im.paste(im)
-                new_im.save(self.filename, format="png")
-                img_data.base_image = self.filename
-                print(f"Base image saved at: {self.filename}")
-
-        self.width = target_y
-        self.height = target_y
-        col_print(f"width at end: {self.width}")
-        col_print(f"height at end: {self.height}")
-        self.spacing = int(self.width / self.grid_size)"""
-
-    """def get_child_dict(self):
-        child_dict = {}
-
-        for points in self.pixel_dict.keys():
-            #print(f"Points for child_dict: {points}")
-            spaced_x, spaced_y = points
-            #print(f"spaced x: {spaced_x} / spaced_y: {spaced_y}")
-            #child_points = list((x, y) for (x, y) in self.pixel_dict.keys() if (((x == (spaced_x + self.spacing) or x == (spaced_x - self.spacing)) and (y == spaced_y))) or (x == spaced_x and (y == (spaced_y + self.spacing) or y == (spaced_y - self.spacing))))# + spacing) or y == (spaced_y - spacing)))
-            child_points = list((x, y) for (x, y) in self.pixel_dict.keys() if (((x == (spaced_x + 1) or x == (spaced_x - 1)) and (y == spaced_y))) or (x == spaced_x and (y == (spaced_y + 1) or y == (spaced_y - 1))))# + spacing) or y == (spaced_y - spacing)))
-            #print(f"CHIld points: {child_points}")
-            child_dict[points] = child_points
-        return child_dict"""
-
 class base_positions:
-
+    logger("start of base_positions class (has no def init)")
     children_dict:dict = {}
     coord_dict:dict = {}
     coords_list:list = []
@@ -162,36 +55,21 @@ class base_positions:
         pass
 
     def set_dicts(self, children_dict):
+        logger("set_dicts")
         self.children_dict = children_dict
         pass
 
-    """def get_row_and_column(self):
-        # pixel_coord = (spaced_x, spaced_y)
-        rows = set()
-        columns = set()
-        self.coord_dict = {"rows": {}, "columns": {}}
-        col_count = 0
-        for i, coord in enumerate(img_data.pixel_dict): # is the dict that just stored the list of points + col values
-            x, y = coord
-            if x not in rows:
-                rows.add(x)
-                self.coord_dict["rows"][i] = x
-            if y not in columns:
-                columns.add(y)
-                self.coord_dict["columns"][col_count] = y
-                col_count += 1"""
-
-
     def align_children(self, selected_coord=None): # adding this so I can get the children in the correct 0,1,2,3 order to rotate properly.
+        logger("align_children")
         # children = self.children_dict[coord]
-        print("in align_children")
+        #print(f"Children dict: {self.children_dict}")
         for point, children in self.children_dict.items():
             point_x, point_y = point
             if selected_coord and point != selected_coord:
+                print(f"selected_coord and point != selected cooord: {selected_coord}")
                 continue
             self.ordered_children[point] = {}
             for child in children:
-                #print(f"Child in children: {child}")
                 x, y = child
                 if x == point_x and y == (point_y-1):
                     self.ordered_children[point]["top"] = child
@@ -209,7 +87,9 @@ class base_positions:
 
             #print(f"self.ordered_children[point]: {self.ordered_children[point]}")
             self.ordered_children[point] = self.order_children(self.ordered_children[point])
+        #print(f"ORDERED CHILDREN AFTER generation in align_children:\n{self.ordered_children}")
         #print(f"self.ordered_children[point]: {self.ordered_children[point]}")
+        #base_pos.ordered_children = self.ordered_children
 
 
     def print_all_coords(self):
@@ -242,15 +122,11 @@ class base_positions:
             children = list(children)[1:] + list(children)[:1] #<-- can probably do without 'specified' and just use children alone for this.
             #print(f"reordered len(children) == 2 or len(children) == 4: {children}")
             return children
-        specified = list(i for i in order if not i in children)
+        ordered_existing = list(i for i in order if i in children) # any reason to not just do this instead of making an exclusion list?
+        #specified = list(i for i in order if not i in children)
+        new_order = ordered_existing[1:] + ordered_existing[:1]
+        #print(f"STARTING ORDER: {list(children)}\nNEW ORDER: {new_order}")
 
-        if specified:
-            specified = specified[0]
-
-        i = order.index(specified)
-        new_order = order[i+1:] + order[:i]
-        if list(new_order) == list(children):
-            new_order = new_order[1:] + new_order[:1] #<-- can probably do without 'specified' and just use children alone for this.
         return new_order
 
 
@@ -267,8 +143,8 @@ class base_positions:
             orig_index = list(children).index(child)
             new_index = list(reordered).index(child)
             #print(f"list(children)[new_index]: {list(children)[new_index]}")
-            rotated_children[list(children)[new_index]] = (children[list(children)[orig_index]], img_data.pixel_dict[children[list(children)[new_index]]])
-
+            #rotated_children[list(children)[new_index]] = (children[list(children)[orig_index]], img_data.pixel_dict[children[list(children)[new_index]]])
+            rotated_children[list(children)[orig_index]] = (children[list(children)[new_index]], img_data.pixel_dict[children[list(children)[orig_index]]])
 
         with Image.open(img_data.filename) as im:
             radius = 25
@@ -349,7 +225,7 @@ def setup_grid(skip_making_image=True):
     #base_pos.get_row_and_column()
     if not skip_making_image:
         make_starting_image()
-    base_pos.align_children()
+        base_pos.align_children()
 
 def print_extras():
     base_pos.print_all_coords()
@@ -375,20 +251,8 @@ def print_point_data(coord):
 
         im.save(img_data.filename, "PNG")
 
-def clean_colours():
-    def get_col_from_col_code(red, blue, green):
-        """col_code is a tuple from pixel_dict, returns a "#FFFFFFF" style value."""
-        return '#%02x%02x%02x' % (red, green, blue)
-    for coord, colour_code in img_data.pixel_dict.items():
-        if  len(colour_code) == 4:
-            r, g, b, a = colour_code
-            if a < 150:
-                r = g = b = 0
-
-            colour_code = get_col_from_col_code(r, b, g)
-            img_data.pixel_dict[coord] = colour_code
-
 def generate_children(coords_list):
+    logger("generate_children")
     child_dict = {}
     #base_pos.coords_list = coords_list
     for entry in coords_list:
@@ -396,11 +260,10 @@ def generate_children(coords_list):
         child_points = list((x, y) for (x, y) in coords_list if (((x == (row + 1) or x == (row - 1)) and (y == column))) or (x == row and (y == (column + 1) or y == (column - 1))))# + spacing) or y == (spaced_y - spacing)))
         #print(f"Central: {entry}\nChild points: {child_points}")
         child_dict[entry] = child_points
-    print(f"child_dict: {child_dict}")
     return child_dict
 
 def initial_setup(base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
-
+    logger("initial_setup")
     if img_data.use_images_not_colours:
         if img_data.new_img_data and img_data.new_img_data[0] == base_file:
             #print(f"new_img_data found for base file `{base_file}`: {img_data.new_img_data[0]}")
@@ -414,23 +277,17 @@ def initial_setup(base_file=None, filename=None, width=None, height=None, dot_ra
 
         #clean_colours()
         #print(f"COORDS LIST before generate children: {coords_list}\n")
+        logger("getting child dict in initial_setup")
         child_dict = generate_children(coords_list)
-        #child_dict = get_img_children(coord_to_img_files)
-
-    """else:
-    ## Now here, both routes to restart with an image go through img_manip first. So instead of getting the dict here, it should go through the dict already made in img_manip.
-        img_data.set_file_data(base_file, filename, width, height, dot_radius, spacing_between)
-        get_point_spacing()
-        clean_colours()
-        child_dict = img_data.get_child_dict()"""
-
-    base_pos.set_dicts(child_dict)
+        base_pos.set_dicts(child_dict)
 
 ##### GUI #####
 
-def start_gui():
+def start_gui(skip_splash=False):
+    logger("start_gui")
     from rotate_gui_01 import splash_window, main_window
-    splash_window(img_data)
+    if not skip_splash:
+        splash_window()
     while True:
         outcome = main_window(img_data, base_pos)
         if outcome:
@@ -454,12 +311,13 @@ def main():
     else:
         run_gui=True
         if run_gui:
+            outcome = None
             while True:
-                setup_grid()
-                outcome = start_gui()
+                #setup_grid()
+                outcome = start_gui(skip_splash = True if outcome else False)
                 if outcome and outcome == "Done":
                     exit()
-                if "restart" in outcome:
+                if "restart" in outcome and outcome != "restart":
                     outcome = outcome.replace("restart_", "")
                     outcome_filename = outcome.replace(".png", "").split("/")[-1]
                     print(f"for restart initial setup: base_file = {outcome}, filename: {outcome_filename}")
@@ -473,4 +331,5 @@ def main():
             print_extras()
             print_point_data(coord)
 
-main()
+if "__main__" == __name__:
+    main()

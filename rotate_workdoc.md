@@ -121,3 +121,64 @@ Maybe this?
                 filename = g.coord_to_img_files[row][column]
             else:
                 filename = img_data.coord_to_img_files[row][column]
+
+okay. So. Singular all-purpose dictionary.
+need
+[row][column][tile_filename]
+I have 'target' stored in the button instance. Also current. So why am I looking at the dict at all?
+
+OH.
+'start over' places the correct images, but it doesn't recognise them as correct. That's a hint.
+
+3.25pm
+Added some logging to see the dataflow. I think the summary is that I don't need the classes in rotate_01 at all anymore. All the work is done in img_manip and the gui script.
+gui script gets the required filename, sends it back to rotate_01. rotate01 then sends the filename + starting dimensions etc to generate_img_grid, which generates the children and sets the initial children_dict (which does get populated).
+
+But then:
+    No coord_to_img_files or not coords_list
+    gridClass new_image
+    generate_children
+    [generate children]
+    the image is generated a second time.
+
+So why not just move that processing step of child_dict etc to img_manip? So the initial setup sends the request, and instead of getting back the base data it needs (and apparently failing to process it), gets back all the data needed and just sends the package back to the GUI?
+
+Okay, well - the 'coord_to_img_files' being missing is an issue, because that /is/ generated, when the images themselves are, in merge_tiles.
+
+Ah. It wasn't generating ordered_children because I was triggering this
+if selected_coord and point != selected_coord:
+by feeding it the list of coords when it didn't need it. Must've confused it with somthing else. Well that's nice.
+
+4.14pm
+okay, fixed the rotation. Had to swap
+#rotated_children[list(children)[new_index]] = (children[list(children)[orig_index]], b.by_coord[children[list(children)[new_index]]].current_image)
+orig and new here, evidently I'd swapped the order at some point.
+
+5.42pm
+added custom rotation count + gridcounts within the game as advanced settings. Currently doesn't update the json but will.
+But, have found an odd thing:
+
+![some_tiles_are_shrunk](image.png)
+I don't know why this happened but I'm guessing perhaps it's the same root cause that had certain tiles not properly placed?
+Because say, the tile in (3,2) - the halfsize one. Tht's the correct tile for that place. But the image behind it is (2,3)
+As you click through, the once that have been made small stay small.
+
+Hm. Then I had this:
+  File "d:\Git_Repos\rotate_game\rotate_gui_01.py", line 308, in show_incorrect
+    button_box = coord_dict[x][y]
+                 ~~~~~~~~~~~~~^^^
+KeyError: 4
+
+which is bizarre, because obviously it exists. Interesting.
+
+Can confirm as well, those tiles are actually undersized in the file, it's not a scaling issue visually; they're just smaller.
+
+Oh, maybe it just didn't generate the image anew and happened to have thos tiles from the previous session. That'd make sense actually. Okay.
+
+Yeah the issue was that the coord_to_img dict (or maybe a different one) wasn't being cleared even through the img was being recreated for the new gridsize, so it would recognise the old grid placement but then fail to find a matching key. Sorted now I think.
+
+I need to make it not have to close the window to get the grid up from the gallery/user selected img. It's just so harsh. Could do a collapsible panel?
+
+Oh, its when you scramble that it picks up the wrong size ones. Then they just stick around after that. Good to know.
+
+Think it's fixed now.

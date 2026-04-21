@@ -4,9 +4,14 @@
 
 from PIL import Image, ImageEnhance, ImageDraw, ImageOps
 
-### from https://codedrome.substack.com/p/image-histograms-with-python-and-pillow ###
+
+def logger(string):
+    logging = False#True
+    if logging:
+        print(string)
 
 def histograms(filename):
+    ### from https://codedrome.substack.com/p/image-histograms-with-python-and-pillow ###
 
     def create_histograms(image):
 
@@ -123,31 +128,44 @@ def histograms(filename):
         histograms["green"].save("histogram_green.png", "PNG")
         histograms["blue"].save("histogram_blue.png", "PNG")
 
-def make_square(cell_w, colour, padding):
-    new_image = Image.new("RGB", (cell_w-(padding*2)-4, cell_w-(padding*2)-4), colour) # is -4 here to compensate for the -2 of placement. But it shouldn't be an int like this, it should be defined by padding. Hm. #TODO
-    new_image.save(f"{colour}_square.png", "PNG")
-    return f"{colour}_square.png"
+def make_square(cell_w, colour, padding, transparent_centre=True):
+    logger("make_square")
+    output_name =  f"{colour}_square.png" if not transparent_centre else  f"{colour}_square_trans.png"
+    outer_width = int(cell_w-(padding*2))
+    #outer_height = cell_w-(padding*2)-4
+    new_image = Image.new("RGBA", (outer_width-4, outer_width-4), colour) # is -4 here to compensate for the -2 of placement. But it shouldn't be an int like this, it should be defined by padding. Hm. #TODO
+
+    if transparent_centre:
+        inner_square_width = int((cell_w*.66))
+        print(f"inner square width: {inner_square_width}")
+        inner_square = Image.new("RGBA", (inner_square_width, inner_square_width), color=(0,0,0,0))
+        #print(f"inner_square: {inner_square.getbbox(alpha_only=False)}") # inner_square: (0, 0, 68, 68
+
+        gap = int((outer_width - inner_square_width)/2)
+
+        if colour == "white":
+            semitrans_width = inner_square_width + gap
+            semitrans_gap = int((outer_width - semitrans_width)/2)
+            semitrans = Image.new("RGBA", (semitrans_width, semitrans_width), (255,255,255,125)) # is -4 here to compensate for the -2 of placement. But it shouldn't be an int like this, it should be defined by padding. Hm. #TODO
+            new_image.paste(semitrans, box=(semitrans_gap, semitrans_gap, semitrans_width + semitrans_gap, semitrans_width + semitrans_gap))
+
+
+        new_image.paste(inner_square, box=(gap, gap, inner_square_width + gap, inner_square_width + gap))
+
+    new_image.save(output_name, "PNG")
+    return output_name
 
 class image_manip_data: # at some point combine this with img_data but for now they're separate because I'm tired
 
-    base_image:str=None
-    filename:str=None
-
-    base_img_width:int=None
-    base_img_height:int=None
-
-    pixel_dict:dict={}
-
-    str_to_coord:dict = {}
-
-    image_dict = {} # dict to send back with all relevant data in it
+    #image_dict = {} # dict to send back with all relevant data in it
     """[x, y coordinates] = (r, g, b values)"""
 
     def __init__(self):
+        logger("init image_manip_data")
         pass
 
     def quantise_img(self, Imageimage=None, combine=False, strength=2, save_file=False, is_tile=False):
-
+        logger("quantise_img")
         from PIL import ImageFilter as filt
         if Imageimage:
             im= Imageimage
@@ -218,7 +236,7 @@ class image_manip_data: # at some point combine this with img_data but for now t
 """
 
     def set_file_data(self, base_file=None, filename=None, region_size=None, padding=9):
-
+        logger("set_file_data")
         import json
         settings = "rotate_settings.json"
         with open(settings, "r") as settings:
@@ -239,12 +257,10 @@ class image_manip_data: # at some point combine this with img_data but for now t
 
         self.padding=padding
 
-        self.base_image = base_file
-
         with Image.open(base_file) as im:
             width, height = im.size
-        self.base_img_width = im.size[0]
-        self.base_img_height = im.size[1]#height
+        self.base_img_width = width#im.size[0]
+        self.base_img_height = height#im.size[1]#
 
         #if self.img_region_height != self.base_img_height:
             #print(f"Image region is {self.img_region_height} but the image is {self.base_img_height}")
@@ -277,18 +293,16 @@ class image_manip_data: # at some point combine this with img_data but for now t
         self.base_img_width = new_im.size[0]
         self.base_img_height = new_im.size[1]
         self.spacing = int(self.base_img_width / self.grid_size)
-        #self.dot_radius = int((self.spacing-5)/2) ## want to remove the 'radius' here entirely. If we're going to be outputting dot representations of the img, it should be defined by the dimensions, not hardcoded like this. This was just because I had a starting image to figure out how it'd work, not because it was a good idea.
-        #self.spacing_between_edges = int(self.spacing - self.dot_radius)
-        #print(f"width at end: {self.base_img_width}")
-        #print(f"height at end: {self.base_img_height}")
 
     def _get_pixel_data(self, im):
         """Pixel data as a sequence of (r,g,b,a) tuples. Works on Pillow < 12.1 (getdata) and >= 12.1 (get_flattened_data)."""
+        logger("_get_pixel_data")
         if hasattr(im, "get_flattened_data"):
             return im.get_flattened_data()
         return im.getdata()
 
     def determine_bg_color(self, im, border_percentage: int = 5):
+        logger("determine_bg_color")
         from collections import Counter
         if not (0 <= border_percentage <= 100): raise ValueError("border_percentage must be between 0 and 100")
         rgb_im = im.convert('RGBA')
@@ -307,6 +321,7 @@ class image_manip_data: # at some point combine this with img_data but for now t
         return Counter(edges).most_common(1)[0][0]
 
     def square_image(self, im: Image):
+        logger("square_image")
         im_width, im_height = im.size
         mode = im.mode
         min_dimension = min(im_width, im_height)
@@ -365,6 +380,7 @@ class image_manip_data: # at some point combine this with img_data but for now t
                 os.remove(p)"""
 
     def extract_tiles(self, im: Image, col_width: int, row_height: int, padding: int):
+        logger("extract_tiles")
         im_width, im_height = im.size
         #print(f"im.size in extract: {im.size}")
         cols = int(im_width / col_width)
@@ -374,38 +390,32 @@ class image_manip_data: # at some point combine this with img_data but for now t
         rows, cols = int(rows), int(cols)
         #print(f"[in extract_tiles]  cols: {cols} // rows: {rows}")
         outputs = []
-        output_dict = {}
+        img_tile_dict = {}
         for i in range(0, rows):
-            output_dict[i] = {}
+            img_tile_dict[i] = {}
             for j in range(0, cols):
                 box = ((j * col_width)+(padding/2), (i * row_height)+(padding/2), (j * col_width +
                     col_width)-(padding/2), (i * row_height + row_height)-(padding/2))
                 outputs.append(im.crop(box))
-                output_dict[i][j] = im.crop(box)
+                img_tile_dict[i][j] = im.crop(box)
 
-        #return outputs
-        return output_dict
+        return img_tile_dict
 
-    def merge_tiles(self, output_path, outputs, image_size=None, manipulate=True, subtlety=2, save_single=True, save_result=False, save_base=True, col_width=5, row_height=5):
-
+    def merge_tiles(self, output_path, img_tiles, image_size=None, manipulate=True, subtlety=2, save_single=True, save_result=False, save_base=True, col_width=5, row_height=5):
+        logger("merge_tiles")
         import os
-        #output_path = r"tile_recombined_2.png"
-        overlay_img = None
-        make_overlay = False
 
         coord_to_img_dict = {}
 
-        if make_overlay:
-            overlay_img = Image.new("RGBA", image_size, color="#458976")
 
         coords = []
         if save_result:
             new_image = Image.new("RGB", image_size)
         output_dir = f"{os.getcwd()}" + r"\tiles"
-        for row in outputs:
+        for row in img_tiles:
             coord_to_img_dict[row] = {}
-            for column in outputs[row]:
-                tile = outputs[row][column]
+            for column in img_tiles[row]:
+                tile = img_tiles[row][column]
                 coords.append((row, column))
 
                 if manipulate:
@@ -420,25 +430,14 @@ class image_manip_data: # at some point combine this with img_data but for now t
                         coord_to_img_dict[row][column] = outp_path
                         button.save(outp_path) # final file outputs
 
-                        """if overlay_img:
-                            paste_box = (column * col_width, row * row_height, column * col_width +
-                                col_width, row * row_height + row_height)
-                            overlay_img.paste(im=button_cropped, box=paste_box)
-"""
                 if save_result:
                     new_image.paste(tile, (column * tile.size[0], row * tile.size[1]))
-
-        if overlay_img:
-            #overlay_img.show()
-            overlay_img.save("overlay_img.png")
-            overlay_img.close()
 
         if save_result:
             new_image.save(output_path)
             new_image.close()
 
         return output_path, coord_to_img_dict, coords
-        return new_image, coord_to_img_dict # sends the actual image instance
 
         """im.crop(box)"""
 
@@ -450,7 +449,7 @@ class image_manip_data: # at some point combine this with img_data but for now t
 img_manip_data = image_manip_data()
 
 def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = False, padding=8, effects=True):
-
+    logger("split_img")
     # adapted from https://github.com/whiplashoo/split-image/blob/main/src/split_image/split.py
 
 
@@ -475,7 +474,7 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
     #print(f"col w and h just before extract_tiles: {col_width} / {row_height}")
     #print(f" cols: {cols} // rows: {rows}")
     image_dict = {"incoming_filename": image_path, "image_size": im.size, "col_width": col_width, "row_height": row_height, "padding": padding}
-    outputs = img_manip_data.extract_tiles(im, col_width, row_height, padding)
+    img_tile_dict = img_manip_data.extract_tiles(im, col_width, row_height, padding)
     #print(f"OUTPUTS: {outputs}")
 
     """if save_tiles_alone:
@@ -487,14 +486,14 @@ def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = Fa
 
     else: # assume we manipulate the image and reassemble"""
     #print(f"Image size before sending to merge_tiles: `{im.size}`")
-    new_image, coord_to_img_files, coords_list = img_manip_data.merge_tiles(output_path=image_path, outputs=outputs, image_size=im.size, manipulate=effects, subtlety = 1, save_single=True, col_width=col_width, row_height=row_height)
+    new_image, coord_to_img_files, coords_list = img_manip_data.merge_tiles(output_path=image_path, img_tiles=img_tile_dict, image_size=im.size, manipulate=effects, subtlety = 1, save_single=True, col_width=col_width, row_height=row_height)
     return new_image, coord_to_img_files, coords_list, im.size
     """  coord_to_img_files: [row_no][column_no]["tile_filename.png"]  """
 
 #base_file = r"Screenshot 2026-04-18 233936_output.png"
 
 def generate_img_grid(base_file, region_size=None, effects=False, padding=8, grid_size = 4, grid_data=None):
-
+    logger(f"Generate image grid for {base_file}")
     if grid_data:
         padding = grid_data.gap
         grid_size = grid_data.grid_size
@@ -509,6 +508,7 @@ def generate_img_grid(base_file, region_size=None, effects=False, padding=8, gri
         img_manip_data.quantise_img(save_file = temp_file_filename, strength=1)
 
     new_image, coord_to_img_files, coords_list, img_size = split_img(temp_file_filename, grid_size, grid_size, should_square=True, save_tiles_alone = False, padding=padding, effects=effects)
+    logger(f"Returning `{new_image}` from generate_img_grid")
     return new_image, coord_to_img_files, coords_list, img_size
 
 #generate_img_grid(base_file = "image_name_for_testing.png", effects=False)
