@@ -8,7 +8,7 @@ def col_print(string):
         print(string)
 
 
-base_image = "better_differentiation.png"
+#base_image = "better_differentiation.png"
 
 def get_point_spacing():
     """adds pixel_dict to img_data"""
@@ -63,8 +63,7 @@ class image_data:
 
     width:int=None
     height:int=None
-    dot_radius:int=72
-    spacing_between_edges:int=13
+
     pixel_dict:dict={}
 
     start_screen=True # True if need to show the 'gallery' intro panel
@@ -76,7 +75,7 @@ class image_data:
     def __init__(self):
         pass
 
-    def set_file_data(self, base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
+    """def set_file_data(self, base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
         self.too_large = False
         import json
         settings = "rotate_settings.json"
@@ -100,7 +99,8 @@ class image_data:
                 self.base_image = base_file
                 col_print(f"width, height: {width, height}")
 
-        """ Here need to set a default image size and scale if needed. Spacing etc needs to also change. This is set up for a premade grid, so maybe a whole different one that just goes by x pixels directly. Not sure."""
+        """# Here need to set a default image size and scale if needed. Spacing etc needs to also change. This is set up for a premade grid, so maybe a whole different one that just goes by x pixels directly. Not sure.
+    """
         self.filename = filename
 
     #if filename != "image_name_for_testing.png":
@@ -110,11 +110,6 @@ class image_data:
 
         if not self.width or not self.height:
             col_print(f"Not self.width or self.height: {self.width} / {self.height}")
-
-        self.dot_radius = dot_radius
-        self.spacing_between_edges = spacing_between
-
-        self.spacing = int(dot_radius/2) + spacing_between + int(dot_radius/2)
 
         target_x, target_y = eval(self.region_size)
         target_x = int(target_x/2)
@@ -139,13 +134,9 @@ class image_data:
         self.height = target_y
         col_print(f"width at end: {self.width}")
         col_print(f"height at end: {self.height}")
-        self.spacing = int(self.width / self.grid_size)
-        self.dot_radius = int((self.spacing-5)/2)
-        self.spacing_between_edges = int(self.spacing - self.dot_radius)
-        col_print(f"self.dot_radius/spacing_between edges: {self.dot_radius} / {self.spacing_between_edges}")
+        self.spacing = int(self.width / self.grid_size)"""
 
-
-    def get_child_dict(self):
+    """def get_child_dict(self):
         child_dict = {}
 
         for points in self.pixel_dict.keys():
@@ -156,7 +147,7 @@ class image_data:
             child_points = list((x, y) for (x, y) in self.pixel_dict.keys() if (((x == (spaced_x + 1) or x == (spaced_x - 1)) and (y == spaced_y))) or (x == spaced_x and (y == (spaced_y + 1) or y == (spaced_y - 1))))# + spacing) or y == (spaced_y - spacing)))
             #print(f"CHIld points: {child_points}")
             child_dict[points] = child_points
-        return child_dict
+        return child_dict"""
 
 class base_positions:
 
@@ -174,7 +165,7 @@ class base_positions:
         self.children_dict = children_dict
         pass
 
-    def get_row_and_column(self):
+    """def get_row_and_column(self):
         # pixel_coord = (spaced_x, spaced_y)
         rows = set()
         columns = set()
@@ -188,7 +179,7 @@ class base_positions:
             if y not in columns:
                 columns.add(y)
                 self.coord_dict["columns"][col_count] = y
-                col_count += 1
+                col_count += 1"""
 
 
     def align_children(self, selected_coord=None): # adding this so I can get the children in the correct 0,1,2,3 order to rotate properly.
@@ -355,7 +346,7 @@ img_data = image_data()
 base_pos = base_positions()
 
 def setup_grid(skip_making_image=True):
-    base_pos.get_row_and_column()
+    #base_pos.get_row_and_column()
     if not skip_making_image:
         make_starting_image()
     base_pos.align_children()
@@ -405,7 +396,7 @@ def generate_children(coords_list):
         child_points = list((x, y) for (x, y) in coords_list if (((x == (row + 1) or x == (row - 1)) and (y == column))) or (x == row and (y == (column + 1) or y == (column - 1))))# + spacing) or y == (spaced_y - spacing)))
         #print(f"Central: {entry}\nChild points: {child_points}")
         child_dict[entry] = child_points
-    #print(f"child_dict: {child_dict}")
+    print(f"child_dict: {child_dict}")
     return child_dict
 
 def initial_setup(base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
@@ -446,9 +437,9 @@ def start_gui():
             break
     return outcome
 
-def main(base_image=base_image):
+def main():
 
-    output_filename = f"{base_image.replace(".png", "").split("/")[-1]}_output.png"
+    #output_filename = f"{base_image.replace(".png", "").split("/")[-1]}_output.png"
     #initial_setup(base_file=base_image, filename = output_filename)
 
     test_all=False#True

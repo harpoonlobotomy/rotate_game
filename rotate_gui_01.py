@@ -17,7 +17,7 @@ class theme_data():
                     'INPUT': "#45523F",
                     'TEXT_INPUT': "#f5db74",
                     'SCROLL': "#003e9b",
-                    'BUTTON': ('black', "#ffda57"),##ffd657"),
+                    'BUTTON': ('black', "#589CB8"),#"#ffda57"),##ffd657"),
                     'PROGRESS': ('#01826B', '#D0D0D0'),
                     'BORDER': 3,
                     'SLIDER_DEPTH': 0,
@@ -55,10 +55,11 @@ class theme_data():
     #background_colour = "#82000F"
     #background_colour = "#243D47"
     background_colour = "#00345B"
-    button_colour = "#5E9980"
+    highlight_button_colour = "#5E9980"
+    button_colour = "#589CB8"
     start_screen:bool = True # is what shows the 'gallery' and lets me get the region dimensions.
 
-theme = theme_data()
+t = theme_data()
 
 #sg.main_global_pysimplegui_settings()
 def get_col_from_col_code(red, green, blue):
@@ -70,13 +71,13 @@ class buttonClass:
     def __init__(self):
         self.coord_to_colour:dict = {} # just a 'grid coordinate to current colour' shortcut.
         self.coord_to_pixel:dict = {}
-        self.pixel_to_coord:dict = {}
-        self.str_to_tuple:dict = {}
+        #self.pixel_to_coord:dict = {}
+        #self.str_to_tuple:dict = {}
         self.row_dict:dict = {}
         self.row_column_dict:dict = {}
         self.buttons:set = set()
-        self.by_coord:dict = {}
-        self.prepared_children:dict = {}
+        self.by_coord:dict[tuple: self.buttonInstance] = {}
+        #self.prepared_children:dict = {}
         self.clean_dict:dict = {} # for the post-converted '36,36' > '0,0' / '121,36' > '1, 0'
         """ self.clean_dict[coord] = {"pixel_coords": pix_coord, "children": {"top": (1,0)}, "target_colour": get_col_from_col_code(img_data.pixel_dict[(x_val, y_val)])} """
 
@@ -99,7 +100,8 @@ class buttonClass:
     def colour_from_coords(self, coords, is_base=False, img_data=None):
 
         if isinstance(coords, str):
-            coords = b.pixel_to_coord[coords]
+            print(f"COORDS GIVEN AS STRING: {coords}")
+            return
 
         if self.by_coord.get(coords):
             if not is_base:
@@ -117,7 +119,8 @@ class buttonClass:
 
         def __init__(self, coords):
             if isinstance(coords, str):
-                coords = b.pixel_to_coord[coords]
+                print("COORDS GIVEN AS A STRING")
+                return#coords = b.pixel_to_coord[coords]
             self.target_image = b.clean_dict[coords]["target_image"]
             self.coords = coords
             self.str_coords = str(coords)
@@ -133,7 +136,6 @@ class buttonClass:
     def button_press(self, coord:buttonInstance, base_pos, img_data):
 
         print(f"BUTTON PRESS: {coord}")
-        #print(f"b.by_coord:\n{b.by_coord}\n\n")# <--- literally nothign here, this is why it doesn't find anythjing.
         rotated_children = {}
         if isinstance(coord, str) or isinstance(coord, tuple):
             if isinstance(coord, str):
@@ -142,22 +144,11 @@ class buttonClass:
         else:
             children = coord.children
         reordered = base_pos.reindex_children(children)
-        #print(f"CHILDREN: {children} // REORDERED: {reordered}")
-        """
-currently, 'children' includes values far above the grid count.
-
-        """
         for child in children:
-            #print(f"CHild: {child}, type: {type(child)}")
             orig_index = list(children).index(child)
             new_index = list(reordered).index(child)
-            #print(f"CHild as indexed: {list(children)[orig_index]}, type: {type(list(children)[orig_index])}")
-            #print(f"CHild as newly indexed: {list(children)[new_index]}, type: {type(list(children)[new_index])}")
-            #print(f"orig_index: {orig_index} // new_index: {new_index}")
-            #rotated_children[list(children)[new_index]] = (children[list(children)[orig_index]], b.colour_from_coords(children[list(children)[new_index]], img_data))
             rotated_children[list(children)[new_index]] = (children[list(children)[orig_index]], b.by_coord[str(children[list(children)[new_index]])].current_image)#), img_data))
 
-        #print(f"Rotated children: {rotated_children}")
         return rotated_children
 
     """
@@ -170,7 +161,9 @@ So, setup stage for buttons:
 """
 
     def set_up_buttons(self, base_pos, img_data):
-
+        #from rotate_01 import base_positions, image_data
+        base_pos
+        img_data
         """   ! button_key_dict == self.row_dict
         self.row_dict: {0: ['(36, 36)', '(121, 36)', '(206, 36)', '(291, 36)', '(376, 36)'], 1: ['(36, 121)', '(121, 121)', '(206, 121)', '(291, 121)', '(376, 121)'], 2: ['(36, 206)', '(121, 206)', '(206, 206)', '(291, 206)', '(376, 206)'], 3: ['(36, 291)', '(121, 291)', '(206, 291)', '(291, 291)', '(376, 291)'], 4: ['(36, 376)', '(121, 376)', '(206, 376)', '(291, 376)', '(376, 376)']}"""
 
@@ -198,16 +191,16 @@ So, setup stage for buttons:
                 img_data.coords_list = coords_list
                 img_data.coord_to_img_files = coord_to_img_files
 
-                self.filename_to_coords = {}
-                self.coords_to_filename = {}
+                #self.filename_to_coords = {}
+                #self.coords_to_filename = {}
                 for row_no in coord_to_img_files:
                     self.row_column_dict[row_no] = dict()
                     for col_no in coord_to_img_files[row_no]:
                         filename = coord_to_img_files[row_no][col_no]
                         self.row_column_dict[row_no][col_no] = filename
-                        self.filename_to_coords[filename] = (row_no, col_no)
-                        self.coords_to_filename[row_no, col_no] = (filename)
-                        b.str_to_tuple[f"{row_no, col_no}"] = (row_no, col_no)
+                        #self.filename_to_coords[filename] = (row_no, col_no)
+                        #self.coords_to_filename[row_no, col_no] = (filename)
+                        #b.str_to_tuple[f"{row_no, col_no}"] = (row_no, col_no)
                     #for col_no, y_val in base_pos.coord_dict["columns"].items():#coord dict: {'rows': {0: 36, 1: 121, 2: 206, 3: 291, 4: 376}, 'columns': {0: 36, 1: 121, 2: 206, 3: 291, 4: 376}}
                         """
                         coord = (x_val, y_val)
@@ -215,6 +208,7 @@ So, setup stage for buttons:
                         self.pixel_to_coord[pix_coord] = coord
                         self.coord_to_pixel[coord] = pix_coord"""
                         #print(f"img_data.pixel_dict[(x_val, y_val) for pix_coord: {pix_coord} (cord: {coord}): {img_data.pixel_dict[(x_val, y_val)]}")
+                        #print(f"Base positions ordered children: {base_pos.ordered_children}")
                         coord = row_no, col_no
                         self.clean_dict[coord] = {"children": base_pos.ordered_children[(row_no, col_no)], "target_image": filename}
 
@@ -244,7 +238,7 @@ def splash_window(img_data):
 
     splashscreen_panel = [
         [sg.Canvas(size=(500,2), pad=2)],
-        [sg.Text(text="\n***** UNNAMED ROTATE GAME *****\n", expand_x=True, expand_y=True, text_color=theme_data().theme_dict[sg.theme()]["gold_text"], justification="center")]
+        [sg.Text(text="\n ***••.  SCRAMBLE  .••*** \n", expand_x=True, expand_y=True, text_color=theme_data().theme_dict[sg.theme()]["gold_text"], justification="center")]
         ]
 
     splashscreen_main = [
@@ -253,7 +247,7 @@ def splash_window(img_data):
     splashscreen_layout = [
         [sg.Frame(title="", key="splashscreen_window", layout=splashscreen_main, font=("courier", 10, "bold"), relief="groove", pad=(5), border_width=5)]]
 
-    splashscreen_window = sg.Window(' ROTATE GAME ••', splashscreen_layout, keep_on_top=True, finalize=True, margins=(10,10), no_titlebar=True, auto_close=True, auto_close_duration=1.5)
+    splashscreen_window = sg.Window(' •• SCRAMBLE ••', splashscreen_layout, keep_on_top=True, finalize=True, margins=(10,10), no_titlebar=True, auto_close=True, auto_close_duration=1.5)
 
     sample_layout = [[sg.Canvas(expand_x=True, expand_y=True, visible=False, key="sample_canvas")]]
     sample_window = sg.Window('', sample_layout, keep_on_top=True, finalize=True, no_titlebar=False, auto_close=True, auto_close_duration=1.5, alpha_channel=0)
@@ -262,7 +256,7 @@ def splash_window(img_data):
         _, _ = sample_window.read(timeout=100)
         event, _ = splashscreen_window.read(timeout=100)
         if splashscreen_window.get_screen_dimensions() and splashscreen_window.get_screen_dimensions() != (None, None):   #fullscreen version"""
-            theme.screen_x, theme.screen_y = splashscreen_window.get_screen_dimensions()
+            t.screen_x, t.screen_y = splashscreen_window.get_screen_dimensions()
             sample_window.close()
 
         if splashscreen_window.is_closed():
@@ -272,11 +266,14 @@ def splash_window(img_data):
 
 
 def main_window(img_data, base_pos):
-
+    from rotate_01 import base_pos, base_positions, img_data, image_data
+    base_pos:base_positions
+    img_data:image_data
+    sg.theme(t.theme_name)
 
     gallery_list = ["testing/lex.png", "rave_shaman.png"]
 
-    theme.difficulty = img_data.difficulty
+    t.difficulty = img_data.difficulty
 
     font_size = 14
 
@@ -290,6 +287,18 @@ def main_window(img_data, base_pos):
         file_selected = sg.popup_get_file(message="Select a .png file to use as the base image", title="Select a .PNG file", file_types=(("PNG Files", "*.png"),))
         if file_selected:
             return file_selected
+
+    def update_clicks(reset=False):
+        if reset and reset == "clicks":
+            t.clicks = 0
+            text = f"Clicks: {t.clicks}"
+        elif not reset:
+            t.clicks += 1
+            text = f"Clicks: {t.clicks}"
+        else:
+            t.clicks = 0
+            text = reset
+        window["click_counter"].update(f"\n{text}")
 
     def check_if_completed(record_incomplete=False):
         """RETURNS LIST OF BUTTON INSTANCES"""
@@ -305,48 +314,34 @@ def main_window(img_data, base_pos):
             return incorrect_buttons
 
         if not not_complete:
-            window["click_counter"].update(f"\nCompleted with {theme.clicks} clicks!\nScramble to play again.")
-            theme.clicks = 0
+            update_clicks(reset = f"\nCompleted with {t.clicks} clicks!\nScramble to play again.")
 
-    def update_clicks(reset=False):
-        if reset and reset == "clicks":
-            theme.clicks = 0
-            text = f"Clicks: {theme.clicks}"
-        elif not reset:
-            theme.clicks += 1
-            text = f"Clicks: {theme.clicks}"
-        else:
-            theme.clicks = 0
-            text = reset
-        window["click_counter"].update(f"\n{text}")
 
     def set_difficulty():
-        theme.difficulty += 1
-        if theme.difficulty >= 3:
-            theme.difficulty = 0
-        window["set_difficulty"].update(f"Difficulty: {theme.difficulty_legend[theme.difficulty]}")
+        t.difficulty += 1
+        if t.difficulty >= 3:
+            t.difficulty = 0
+        window["set_difficulty"].update(f"Difficulty:\n{t.difficulty_legend[t.difficulty]}")
+        update_clicks(f"Difficulty set to {t.difficulty}")
 
-        update_clicks(f"Difficulty set to {theme.difficulty}")
 
-    def show_incorrect(fix_incorrect=True):
-        print("In show_incorrect.")
+    def show_incorrect(fix_incorrect=False):
         incorrect_buttons = check_if_completed(record_incomplete=True)
+        """incorrect_buttons == list of buttonInstances"""
+
         if not incorrect_buttons:
             print("No incorrect buttons to highlight.")
             return
-        """incorrect_buttons == list of buttonInstances"""
 
-        #print(f"Incorrect buttons: {incorrect_buttons}")
         saved_colours = {}
         from time import sleep
         for button in incorrect_buttons:
-            #print(f"button in incorrect buttons: {button.coords}")
             button:buttonClass.buttonInstance
             saved_colours[button] = button.current_image
             x, y = button.coords
             if not g.white_square:
-                import img_manipulation
-                g.white_square = img_manipulation.make_square(g.cell_w, "white", g.padding)
+                from img_manipulation import make_square
+                g.white_square = make_square(g.cell_w, "white", g.padding)
 
             button_box = coord_dict[x][y]
             g.grid.draw_image(filename=g.white_square, location = (button_box[0][0]+(g.padding/2)+2, button_box[0][1]+(g.padding/2)+2))
@@ -365,7 +360,7 @@ def main_window(img_data, base_pos):
             if fix_incorrect:
                 new_image = button.target_image
             else:
-                saved_colours[button]
+                new_image = saved_colours[button]
             button:buttonClass.buttonInstance
             x, y = button.coords
             update_clicked_square(x, y, new_image, click_off=True)
@@ -378,7 +373,6 @@ def main_window(img_data, base_pos):
     def set_solved(img_data):
         show_incorrect(fix_incorrect=True)
 
-        update_clicks(reset=True)
 
     def rotate_children(rotated_children, update=False):
 
@@ -406,7 +400,7 @@ def main_window(img_data, base_pos):
             "2": 20
         }
 
-        no_of_rotations = points_to_rotate[str(theme.difficulty)] # thinking instead of difficulty defining rotations, it's grid size. Or possible both. Advanced mode where you can set no of rotations _ grid size probably. But for now, difficulty=grid size.
+        no_of_rotations = points_to_rotate[str(t.difficulty)] # thinking instead of difficulty defining rotations, it's grid size. Or possible both. Advanced mode where you can set no of rotations _ grid size probably. But for now, difficulty=grid size.
         # So instead of that... what, always 2/3rds of the grid? That feels like an advanced setting option too. At least half. I like the idea of at least some being in the right place.
 
 
@@ -425,7 +419,7 @@ def main_window(img_data, base_pos):
                     #col_print(f"Children to rotate: {rotated_children}")
                     #update_clicked_square(row, column, click_off=False)
             rotate_children(rotated_children)
-        update_clicks(reset="click")
+        t.clicks = 0
 
 
 ### GRID POINTS
@@ -489,6 +483,7 @@ def main_window(img_data, base_pos):
             from rotate_01 import generate_children
             self.child_dict = generate_children(self.coords_list)
             base_pos.child_dict = self.child_dict
+            from rotate_01 import base_positions, image_data
             b.set_up_buttons(base_pos, img_data)
 
 
@@ -579,49 +574,72 @@ def main_window(img_data, base_pos):
         window["grid"].update()
 
 
+    def set_buttons_enable(enable=True):
+
+        window["set_scramble"].update(disabled = not enable)
+        window["get_hint"].update(disabled = not enable)
+        window["set_perfect"].update(disabled = not enable)
+        window["set_gallery"].update(disabled = not enable)
+
 ###################################################################################
 
 
     #gallery_source = "manip_testing_2.png" # make a list/dict later and generate from that. this'll do for now.
+
+    def setup_button(text, key=None, size=None, font="courier 12", start_disabled=False, colour=t.button_colour):
+        if not key:
+            if text:
+                key = f"{text}_key"
+
+        if size:
+            return sg.Button(button_text=text, size=size, key=key, use_ttk_buttons=True, auto_size_button=True, font=font, disabled_button_color="gray", disabled=start_disabled, button_color=colour)
+
+        return sg.Button(button_text=text, key=key, use_ttk_buttons=True, auto_size_button=True, font=font, disabled_button_color="gray", disabled=start_disabled)
+
+    def setup_text(text, key=None, size=None, font="courier 16"):
+        colour = "white"
+        if not key:
+            if text:
+                key = f"{text}_key"
+        if size:
+            return sg.Text(text=text, key=key, size=size, justification="center", text_color=colour, font=font)
+        else:
+            return sg.Text(text=text, key=key, justification="center", text_color=colour, font=font)
 
     if img_data.start_screen:
 
         def button_yielder():
             #buttons = list((sg.Canvas(pad=0, background_color="yellow"), sg.Text("Click an image to use it as the base for the puzzle.")))
             buttons = list()
-            buttons.append(sg.Stretch(background_color=show_stretchers if show_stretchers else theme.background_colour))
+            buttons.append(sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour))
             add_buttons = list(sg.Button(button_text="", image_filename=i, image_source=i, image_subsample=2, key=f"imgkey_{i}", image_size=(200,200)) for i in gallery_list)
             for b in add_buttons:
                 buttons.append(b)
-            buttons.append(sg.Stretch(background_color=show_stretchers if show_stretchers else theme.background_colour))
+            buttons.append(sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour))
             return buttons
 
         grid_panel = [
             #[sg.Canvas(size=(int(theme.screen_x*.66), 0), pad=0)],
-            [sg.VStretch(background_color=show_stretchers if show_stretchers else theme.background_colour)],
-            [sg.Text("\nClick an image to use it as the base for the puzzle.\n")],
-            [sg.Canvas(size=(theme.screen_x*.66, 20), background_color="black" if debug_colours else theme.background_colour)],
+            [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+            [(setup_text("\n - choose an image -\n"))],
+            [sg.Canvas(size=(t.screen_x*.66, 20), background_color="black" if debug_colours else t.background_colour)],
             button_yielder(),
             #[sg.Canvas(size=(1, theme.screen_y), pad=0, background_color="yellow"), sg.Text("Click an image to use it as the base for the puzzle."),
                 #button_yielder()],
                 #(sg.Button(button_text=i, image_filename=i, image_source=i, image_subsample=2, key=f"imgkey_{i}") for i in gallery_list)],
                 #sg.Button(button_text=gallery_source, image_filename=gallery_source, image_source=gallery_source, image_subsample=2, key="imgkey_manip_testing_2.png")],
                 #sg.Image(source="manip_testing_2.png", subsample=2, key="imgkey_manip_testing_2.png")],
-            [sg.VStretch(background_color=show_stretchers if show_stretchers else theme.background_colour)]
+            [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
             ]
 
     else:
-        """grid_panel = [
-            [sg.VStretch(background_color=theme.background_colour)],
-            [sg.Canvas(size=(1, theme.screen_y), pad=0, background_color="yellow"), sg.Stretch(background_color=theme.background_colour), set_up_grid(img_data.new_img_data, img_data.new_img_data[3]), sg.Stretch(background_color=theme.background_colour)],
-            [sg.VStretch(background_color=theme.background_colour)]
-            ]"""
         grid_panel = [
-            [sg.VStretch(background_color=show_stretchers if show_stretchers else theme.background_colour)],
-            [sg.Canvas(size=(int(theme.screen_x*.66), 0), pad=0)],
-            [sg.Stretch(background_color=show_stretchers if show_stretchers else theme.background_colour), set_up_grid(img_data.new_img_data, img_data.new_img_data[3]), sg.Stretch(background_color=show_stretchers if show_stretchers else theme.background_colour)],
-            #[set_up_grid(img_data.new_img_data, img_data.new_img_data[3])],
-            [sg.VStretch(background_color=show_stretchers if show_stretchers else theme.background_colour)]
+            [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+            [sg.Canvas(size=(int(t.screen_x*.66), 0), pad=0)],
+            [sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour),
+                set_up_grid(img_data.new_img_data, img_data.new_img_data[3]),
+                sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+            [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
             ]
 
 
@@ -629,27 +647,38 @@ def main_window(img_data, base_pos):
     difficulty_text = "Easy: 4x4 grid\nStandard: 6x6 grid\nHard: 9x9 grid."
 
     all_settings = [
-        [sg.VStretch(background_color=show_stretchers if show_stretchers else theme.background_colour)],
-        [sg.Button(button_text="Scramble", key="set_scramble", use_ttk_buttons=True, disabled=True, button_color=theme.button_colour, disabled_button_color="gray")],
-        [sg.VStretch(background_color=show_stretchers if show_stretchers else theme.background_colour)],
-        [sg.Button(button_text=f"Set image", key="set_image")],
-        [sg.Button(button_text=f"Difficulty: {theme.difficulty_legend[theme.difficulty]}", key="set_difficulty", tooltip=difficulty_text)],
-            #sg.Checkbox(text = f"use images (experimental): ", enable_events=True, key="set_use_images_checkbox", default=True)],
-        [sg.Button(button_text="Show incorrect", key="get_hint")],
-        [sg.Button(button_text="Give up", key="set_perfect")],
-        [sg.Text(text=f"\nWaiting to scramble...", key="click_counter", size=(20,3), justification="center")],
-        [sg.Button(button_text="Exit", key="exit")],
-        [sg.VStretch(background_color=show_stretchers if show_stretchers else theme.background_colour)]
+        [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+        [setup_button("\n - scramble - \n", key="set_scramble", start_disabled=True, colour=t.highlight_button_colour, font="Courier 16 bold")],
+        [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+        [sg.HorizontalSeparator()],
+        [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+        [setup_button(text=f"Custom image", key="set_image")],
+        #[sg.Button(button_text=f"Custom image", key="set_image", use_ttk_buttons=True, button_color=t.button_colour)],
+        [setup_button(text=f"Difficulty:\n{t.difficulty_legend[t.difficulty]}", key="set_difficulty")],
+        [setup_button(text="Show incorrect", key="get_hint", start_disabled=True)],
+        [setup_button(text="Start over", key="set_perfect", start_disabled=True)],
+        [setup_button(text=f"Return to Gallery", key="set_gallery", start_disabled=True)],
+        [setup_button(text="Exit", key="exit")],
+        [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
+    ]
+
+    text_layout = [
+                [setup_text(text=f"\nWaiting to scramble...\n", key="click_counter")]#, size=(20,4))]
     ]
 
     side_layout = [
-                  [sg.Column(layout=all_settings, element_justification="center", justification="right", vertical_alignment="center", expand_y=False, background_color="red" if debug_colours else theme.background_colour)]
+                  [sg.Column(layout=all_settings, element_justification="center", justification="right", vertical_alignment="center", expand_y=False, background_color="red" if debug_colours else t.background_colour)]
                   ]
 
     side_panel = [
-                    [sg.VStretch(background_color=show_stretchers if show_stretchers else theme.background_colour)],
+                    [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
                     [sg.Frame(title="", layout=[[sg.Frame(title="", layout=side_layout, relief="ridge", border_width=7, pad=50)]], relief="groove", border_width=5, pad=40)],
-                  [sg.VStretch(background_color=show_stretchers if show_stretchers else theme.background_colour)]
+                  [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+                  [sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour),
+                    sg.Frame(title="", layout=text_layout, element_justification="center"),
+                    sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+                  [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+                  [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
                   ]
 
     inside_between = [[sg.Canvas(size=(5, None), expand_y=True, background_color="#0E1B25"),
@@ -668,26 +697,26 @@ def main_window(img_data, base_pos):
 
     layout = [[sg.Frame(title="", key="main_window",
                             layout=[[
-                                    sg.Stretch(background_color=show_stretchers if show_stretchers else theme.background_colour),
+                                    sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour),
                                     sg.Column(layout=grid_panel, key="central",
-                                                background_color="magenta" if debug_colours else theme.background_colour, pad=(5,5), element_justification='center', vertical_alignment='center', expand_x=True, expand_y=True),
-                                    sg.Stretch(background_color=show_stretchers if show_stretchers else theme.background_colour),
-                                    sg.Column(layout=pillar, expand_y=True, background_color="orange" if debug_colours else theme.background_colour, element_justification="center", pad=((20,0),(20,20))),#sg.VerticalSeparator(pad=5),
+                                                background_color="magenta" if debug_colours else t.background_colour, pad=(5,5), element_justification='center', vertical_alignment='center', expand_x=True, expand_y=True),
+                                    sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour),
+                                    sg.Column(layout=pillar, expand_y=True, background_color="orange" if debug_colours else t.background_colour, element_justification="center", pad=((20,0),(20,20))),#sg.VerticalSeparator(pad=5),
                                     sg.Column(side_panel, key="side", element_justification="right", vertical_alignment="center",
-                                                background_color="dark blue" if debug_colours else theme.background_colour, pad=((0,5),(5,5)), expand_x=False, expand_y=True)]],
+                                                background_color="dark blue" if debug_colours else t.background_colour, pad=((0,5),(5,5)), expand_x=False, expand_y=True)]],
                             font=("courier", 10, "bold"), relief="groove", pad=(5), border_width=5, expand_x=True, expand_y=True,
-                            background_color="green" if debug_colours else theme.background_colour, element_justification="right")]
+                            background_color="green" if debug_colours else t.background_colour, element_justification="right")]
                         ]
 
-    window = sg.Window(' •• ROTATE •• ', layout, keep_on_top=False, finalize=True, margins=(3,3), no_titlebar=False, resizable=True, size=(theme.screen_x, theme.screen_y), return_keyboard_events=True, enable_window_config_events=True, element_justification="center")
+    window = sg.Window(' •• SCRAMBLE •• ', layout, keep_on_top=False, finalize=True, margins=(3,3), no_titlebar=False, resizable=True, size=(t.screen_x, t.screen_y), return_keyboard_events=True, enable_window_config_events=True, element_justification="center")
 
     last_held_xy = None
-    if theme.maximise_window:
+    if t.maximise_window:
         window.Maximize()
-        theme.maximised_size = tuple(window.size)
+        t.maximised_size = tuple(window.size)
 
     start_screen_checked = False
-    theme.game_started = False
+    t.game_started = False
     while True:
         event, values = window.read(timeout=1000)
         """
@@ -716,9 +745,9 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
 
             g.region_size = g.width, g.height
             coord_dict = initial_grid_drawing()
+            window["set_scramble"].update(disabled=False, button_color=t.highlight_button_colour)
             window["grid"].set_size(size=(g.width, g.height))
             #window["side"].set_size((200, None))
-            window["set_scramble"].update(disabled=False)
             window.refresh()
             start_screen_checked=True
 
@@ -729,8 +758,7 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                 row = int(x // g.cell_w)
                 col = int(y // g.cell_h)
 
-
-                print(f"last_held_xy: {last_held_xy} // current xy: {(col, row)}")
+                #print(f"last_held_xy: {last_held_xy} // current xy: {(col, row)}")
                 if last_held_xy and (col, row) != last_held_xy:
                     update_clicked_square(last_held_xy[0], last_held_xy[1], click_off=True)
 
@@ -741,16 +769,21 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                 #event = b.by_coord[event]
                 #event = b.str_to_tuple[last_held_xy]
                 rotated_children = b.button_press(last_held_xy, base_pos, img_data)
-                print(f"Children to rotate: {rotated_children}")
+                #print(f"Children to rotate: {rotated_children}")
                 rotate_children(rotated_children)
-                print(f"Button pressed: {last_held_xy}")
+                #print(f"Button pressed: {last_held_xy}")
                 check_if_completed()
 
-            elif "Escape" in event or event == "exit":
+            if "Escape" in event or event == "exit":
                 window.close()
                 return "Done"
 
             elif event.startswith("set_"):
+                if event == "set_gallery":
+                    window.close()
+                    img_data.start_screen=True
+                    return f"restart"
+
                 if event == "set_image":
                     new_img_name = change_image()
                     if new_img_name:
@@ -772,6 +805,9 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
 
                 if event == "set_scramble":
                     scramble_colours()
+                    if not t.game_started:
+                        set_buttons_enable(enable=True)
+
                 elif event == "set_difficulty":
                     set_difficulty()
                 elif event == "set_perfect":
@@ -784,49 +820,31 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
             elif event == "get_hint":
                 show_incorrect()
 
-            elif event in b.by_coord:
-                #event = b.str_to_tuple[event]
-                print(f"EVENT: {event}, type: {type(event)}")
-                #window["button_grid"].update()
-                print(f"button_grid Size = {window['button_grid'].get_size()}")
-                #window["central"].update()
-                print(f"central Size = {window['central'].get_size()}")
-                # Size = (1054, 967) <-- okay so it works once something's been pressed. This is getting the button grid itself, but assumedly it will work for the column in general? Will test. Answer: yes. Pressing a button in button_grid gets the correct size. Okay.
-                #event = b.by_coord[event]
-                #print(f"b.by_coord: \n{b.by_coord}\n\n img_data.str_to_coord: \n{img_data.str_to_coord}\n\n")
-                update_clicks()
-                #event = b.by_coord[event]
-                event = b.str_to_tuple[event]
-                rotated_children = b.button_press(event, base_pos, img_data)
-                print(f"Children to rotate: {rotated_children}")
-                rotate_children(rotated_children)
-                print(f"Button pressed: {event}")
-                check_if_completed()
 
             elif event != "__TIMEOUT__":
                 if event == "__WINDOW CONFIG__":
                     #print(f"original screen_x, original screen_y: {theme.screen_x}, {theme.screen_y}")
-                    if window.size == theme.maximised_size:
-                        theme.maximise_window = True
+                    if window.size == t.maximised_size:
+                        t.maximise_window = True
                     else:
-                        theme.maximise_window = False
+                        t.maximise_window = False
                     new_screen_x, new_screen_y = window.size
 
-                    if new_screen_x == theme.screen_x and new_screen_y == theme.screen_y:
+                    if new_screen_x == t.screen_x and new_screen_y == t.screen_y:
                         continue
                     else:
                         reset = False
                         #print(f"new_screen_x, new_screen_y: {new_screen_x}, {new_screen_y}")
-                        max_x = max(new_screen_x - theme.screen_x, theme.screen_x - new_screen_x)
+                        max_x = max(new_screen_x - t.screen_x, t.screen_x - new_screen_x)
                         #print(f"MAX X DIFF: {max_x}")
-                        max_y = max(new_screen_y - theme.screen_y, theme.screen_y - new_screen_y)
+                        max_y = max(new_screen_y - t.screen_y, t.screen_y - new_screen_y)
                         #print(f"MAX Y DIFF: {max_y}")
                         if max_x > 100 or max_y > 100:
                             reset = True
 
                         if reset:
-                            theme.screen_x = new_screen_x
-                            theme.screen_y = new_screen_y
+                            t.screen_x = new_screen_x
+                            t.screen_y = new_screen_y
                             window.close()
                             break
 

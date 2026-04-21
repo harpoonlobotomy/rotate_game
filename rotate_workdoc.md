@@ -68,3 +68,56 @@ The rotation is going the wrong way. No wonder I was struggling.
 
 10.03pm
 improved the ui some.
+
+0.19am
+exit button doesn't work during gameplay
+sometimes (for reasons I don't understand yet) the tiles shown aren't correct. They appear correct but the accuracy check shows them as wrong and when you rotate it they seemingly appear out of nowhere, potentially appearing as duplicates, that then disappear when rotated. Can't see a common thread/cause yet. Will test more tomorrow.
+
+0:54am
+Now the splash screen is showing twice. I removed a bunch of extraneous code from the original version but now this is happening. Will figure it out tomorrow. Should already be in bed.
+
+Should add a transparent square in the white square so you can still see the image underneath. Make it like a glowing border. Would help with identifying the above problem and be prettier.
+
+11.20am 21/4/26
+re splash screen showing twice:
+"in align_children
+in align_children"
+plays twice.
+
+So, it does this:
+
+    ABOUT TO GENERATE `rave_shaman_temp.png` from `rave_shaman.png`
+
+    Base image saved at: rave_shaman_temp.png
+    child_dict: {full dict here}
+    in align_children
+    No coord_to_img_files or not coords_list
+    child_dict: {full dict here}
+    new_img_data found
+    Base positions ordered children:
+
+It's because setup needs the image data first to make the grid, but then the grid makes the image again.
+
+Still not sure why the splash screen runs twice.
+But for now -
+going to isolate the 'new image' process, so all the data is in one place to be used by whatever needs it.
+
+Oh - the splashscreen was running twice because I imported
+#from rotate_01 import base_positions, image_data
+to get the data typing for set_up_buttons. As soon as I removed that it stopped. Good to know.
+
+Hm. Had this cause a crash:
+
+*  File "d:\Git_Repos\rotate_game\rotate_gui_01.py", line 378, in show_incorrect
+*    update_clicked_square(x, y, new_image, click_off=True)
+
+Need to make the text output box bigger and more appealing.
+
+Need to figure out why it's sometimes showing the wrong tile.
+It seems to only come about from scrambling, I've not seen it happen in user clicking.
+(Though it does rotate the wrong way, I really need to fix that.)
+Maybe this?
+            if not hasattr(img_data, "coord_to_img_files") or not img_data.coord_to_img_files:
+                filename = g.coord_to_img_files[row][column]
+            else:
+                filename = img_data.coord_to_img_files[row][column]
