@@ -24,7 +24,7 @@ class image_data:
 
     grid_size = 5
     rotations_count:int = None
-    region_size:tuple = (640, 480)
+    region_size:tuple = (500, 500)
     difficulty = 1
     is_fullscreen = True
     padding = 5
@@ -262,16 +262,16 @@ def generate_children(coords_list):
         child_dict[entry] = child_points
     return child_dict
 
-def initial_setup(base_file=None, filename=None, width=None, height=None, dot_radius=72, spacing_between=13):
+def initial_setup(base_file=None):
     logger("initial_setup")
     if img_data.use_images_not_colours:
         if img_data.new_img_data and img_data.new_img_data[0] == base_file:
-            #print(f"new_img_data found for base file `{base_file}`: {img_data.new_img_data[0]}")
+            print(f"new_img_data found for base file `{base_file}`: {img_data.new_img_data[0]}")
             base_file, coord_to_img_files, coords_list, image_size = img_data.new_img_data
         else:
-            #print(f"new_img_data not found for initial setup for base file {base_file}")
+            print(f"new_img_data not found for initial setup for base file {base_file}")
             from img_manipulation import generate_img_grid
-            #print("Giong to generate_img_grid from ln422")
+            print("Going to generate_img_grid from ln274")
             base_file, coord_to_img_files, coords_list, image_size = generate_img_grid(base_file, img_data.region_size, grid_size=img_data.grid_size)
             img_data.new_img_data = base_file, coord_to_img_files, coords_list, image_size
 
@@ -280,6 +280,7 @@ def initial_setup(base_file=None, filename=None, width=None, height=None, dot_ra
         logger("getting child dict in initial_setup")
         child_dict = generate_children(coords_list)
         base_pos.set_dicts(child_dict)
+    return img_data.new_img_data
 
 ##### GUI #####
 
@@ -321,7 +322,7 @@ def main():
                     outcome = outcome.replace("restart_", "")
                     outcome_filename = outcome.replace(".png", "").split("/")[-1]
                     print(f"for restart initial setup: base_file = {outcome}, filename: {outcome_filename}")
-                    initial_setup(base_file=outcome, filename = f"{outcome_filename}_output.png")
+                    initial_setup(base_file=outcome)#, filename = f"{outcome_filename}_output.png")
 
         else:
             row = 2
