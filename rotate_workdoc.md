@@ -211,3 +211,5 @@ More improvements but yet again I'm running into 'graph is not finalised'. I wis
 4.02pm
 okay the layout basically works now.
 Except if you go to the gallery and pick a new image, the text output ends up above the puzzle, when it's meant to be below. I think I have to hide/unhide them in the right order.
+
+5.38pm have the main window fading in/out now. It's neat.
