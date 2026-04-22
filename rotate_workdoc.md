@@ -196,4 +196,12 @@ hm. Now selecting an image from the gallery no longer works if it's not fullscre
 
 Okay, fixed that. Back on fixing the layout. I have it (mostly) working so the window doesn't need to close and reopen to start showing the tile, I'm just trying to get it centred. Same issue I had previously, but sadly the fix from last time isn't working. So I'm trying a bunch of other things, but tbh it's likely just going to be 'tiny invisible canvas that makes it look right'.
 
-Need to formalise the references. I'm sending a heap of data to both g. and img_data and I'm not sure I need img_data at all anymore. It gets me some settings etc but img_manip gets those anyway. 
+Need to formalise the references. I'm sending a heap of data to both g. and img_data and I'm not sure I need img_data at all anymore. It gets me some settings etc but img_manip gets those anyway.
+
+    self.grid_size
+    self.difficulty
+    self.background_colour
+    self.default_screen_size
+    self.is_fullscreen
+
+are now all in theme_data.

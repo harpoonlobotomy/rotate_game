@@ -162,6 +162,8 @@ class image_manip_data: # at some point combine this with img_data but for now t
 
     def __init__(self):
         logger("init image_manip_data")
+        self.output_filename = None
+        self.img_width = None
         pass
 
     def quantise_img(self, Imageimage=None, combine=False, strength=2, save_file=False, is_tile=False):
@@ -170,7 +172,7 @@ class image_manip_data: # at some point combine this with img_data but for now t
         if Imageimage:
             im= Imageimage
         else:
-            im = Image.open(self.filename)
+            im = Image.open(self.output_filename)
 
         width, height = im.size
         im = im.convert("RGB")
@@ -213,7 +215,7 @@ class image_manip_data: # at some point combine this with img_data but for now t
                 new_image.paste(im_2, (0, im_1.height))
                 new_image.paste(im_3, (im.width, im_1.height))
 
-                new_image.save(f"{self.filename.replace('.png', '')}_horizontal_concatenated_image.png")
+                new_image.save(f"{self.output_filename.replace('.png', '')}_horizontal_concatenated_image.png")
             """im_4 = im_3.filter(filter=filt.ModeFilter(size=10))
             im_sharpen = im.filter(filter=filt.SHARPEN())
             im_sharpen = im_detail.filter(filter=filt.SHARPEN())
@@ -235,64 +237,33 @@ class image_manip_data: # at some point combine this with img_data but for now t
             im.show()
 """
 
-    def set_file_data(self, base_file=None, filename=None, region_size=None, padding=9):
+    def set_file_data(self, base_file, filename, region_size=None, padding=9, grid_size=4):
         logger("set_file_data")
-        import json
-        settings = "rotate_settings.json"
-        with open(settings, "r") as settings:
-            settings_data = json.load(settings)
 
-        self.grid_size = settings_data["grid_size"]
-        self.difficulty = settings_data["difficulty"]
-        self.background_colour = settings_data["background_colour"]
-        self.default_screen_size = settings_data["screen_size"]
-        self.is_fullscreen = settings_data["fullscreen"]
-
-        self.filename = filename
-
+        self.output_filename = filename
         if region_size:
-            self.img_region_width, self.img_region_height = region_size
+            if region_size[0] < region_size[1]:
+                target_width = region_size[0]
+            else:
+                target_width =  region_size[1]
         else:
-            self.img_region_width, self.img_region_height = 400, 400
+            target_width = 400
 
         self.padding=padding
 
         with Image.open(base_file) as im:
-            width, height = im.size
-        self.base_img_width = width#im.size[0]
-        self.base_img_height = height#im.size[1]#
-
-        #if self.img_region_height != self.base_img_height:
-            #print(f"Image region is {self.img_region_height} but the image is {self.base_img_height}")
-        if not self.base_img_width or not self.base_img_height:
-            print(f"Not self.width or self.height: {self.base_img_width} / {self.base_img_height}/ exiting, can't handle this yet.")
-            exit()
-
-        """
-        So instead of the below, maybe I check to see whether w or h is closer to region dimensions (or which exceeds by more) and scale by that. Would make more sense. Currently the whole grid setup is expecting strictly squares, but I think it should be pretty straightforward to change it? I think....
-        #target_x = int(target_x/2)
-        #target_y = int(target_y/2) # arbitrarily, img is half the screen size. Will figure a better way of doing it. Maybe an interim screen for image selection before the grid is generated, and the region area is defined then?
-        #if abs(self.img_region_width - width) > 100 or abs(self.img_region_height - height) > 100:
-            #print("IMAGE IS THE WRONG SIZE.")
-            #width_diff = abs(self.img_region_width - width)
-            #print(f"Width diff: {width_diff}")
-            #height_diff = abs(self.img_region_height - height)
-            #print(f"Height diff: {height_diff}")
-            #if width_diff > height_diff:
-                #print("Is more wrong in width than height. How/why does this matter? No idea.")
-        """
-
-        with Image.open(base_file) as im:
-            im = im.resize(size=(int(self.img_region_height*.8), int(self.img_region_height*.8)))
-            with Image.new("RGBA", size=(int(self.img_region_height*.8), int(self.img_region_height*.8))) as new_im:
+            im = im.resize(size=(int(target_width*.8), int(target_width*.8))) # 80% of the available height. currently assuming landscape, will adapt later.
+            with Image.new("RGBA", size=(int(target_width*.8), int(target_width*.8))) as new_im:
                 new_im.paste(im)
-                new_im.save(self.filename, format="png")
-                img_manip_data.base_image = self.filename
-                print(f"Base image saved at: {self.filename}")
+                new_im.save(self.output_filename, format="png")
 
-        self.base_img_width = new_im.size[0]
-        self.base_img_height = new_im.size[1]
-        self.spacing = int(self.base_img_width / self.grid_size)
+                print(f"Base image saved at: {self.output_filename}")
+
+        self.region_height = target_width
+        self.img_width = new_im.size[0]
+        self.col_width = int(self.img_width / grid_size)
+        self.row_width = int(self.img_width / grid_size)
+        #self.spacing = int(self.img_width / grid_size)
 
     def _get_pixel_data(self, im):
         """Pixel data as a sequence of (r,g,b,a) tuples. Works on Pillow < 12.1 (getdata) and >= 12.1 (get_flattened_data)."""
@@ -320,7 +291,7 @@ class image_manip_data: # at some point combine this with img_data but for now t
 
         return Counter(edges).most_common(1)[0][0]
 
-    def square_image(self, im: Image):
+        """def square_image(self, im: Image):
         logger("square_image")
         im_width, im_height = im.size
         mode = im.mode
@@ -340,77 +311,55 @@ class image_manip_data: # at some point combine this with img_data but for now t
             im_r.paste(im, (0, offset))
         else:
             im_r.paste(im, (offset, 0))
-        return im_r
+        return im_r"""
 
-    """def reverse_split(self, paths_to_merge, rows, cols, image_path, should_cleanup=False, should_quiet=False):
-        if len(paths_to_merge) == 0:
-            print("No images to merge!")
-            return
-        for index, path in enumerate(paths_to_merge):
-            path_number = int(path.split("_")[-1].split(".")[0])
-            if path_number != index:
-                print("Warning: Image " + path +
-                    " has a number that does not match its index!")
-                print("Please rename it first to match the rest of the images.")
-                return
+    def extract_tiles(self, image_path, col_width: int, row_height: int, padding: int, effect=False):
 
-        images_to_merge = [Image.open(p) for p in paths_to_merge]
-        image1 = images_to_merge[0]
-        new_width = image1.size[0] * cols
-        new_height = image1.size[1] * rows
-        new_image = Image.new(image1.mode, (new_width, new_height))
-        for path in paths_to_merge:
-            print("Path: ", path)
-        print("Merging image tiles with the following layout:", end=" ")
-        for i in range(0, rows):
-            print("\n")
-            for j in range(0, cols):
-                print(paths_to_merge[i * cols + j], end=" ")
-        print("\n")
-        for i in range(0, rows):
-            for j in range(0, cols):
-                image = images_to_merge[i * cols + j]
-                new_image.paste(image, (j * image.size[0], i * image.size[1]))
-        print("Saving merged image: " + image_path)
-        new_image.save(image_path)
-        if should_cleanup:
-            import os
-            for p in paths_to_merge:
-                print("Cleaning up: " + p)
-                os.remove(p)"""
-
-    def extract_tiles(self, im: Image, col_width: int, row_height: int, padding: int):
         logger("extract_tiles")
-        im_width, im_height = im.size
+        im = Image.open(image_path)
         #print(f"im.size in extract: {im.size}")
-        cols = int(im_width / col_width)
-        rows = int(im_height / row_height)
-        if not cols.is_integer(): raise ValueError("column width must be a factor of the total image width")
-        if not rows.is_integer(): raise ValueError("row height must be a factor of the total image height")
-        rows, cols = int(rows), int(cols)
-        #print(f"[in extract_tiles]  cols: {cols} // rows: {rows}")
-        outputs = []
-        img_tile_dict = {}
-        for i in range(0, rows):
-            img_tile_dict[i] = {}
-            for j in range(0, cols):
-                box = ((j * col_width)+(padding/2), (i * row_height)+(padding/2), (j * col_width +
-                    col_width)-(padding/2), (i * row_height + row_height)-(padding/2))
-                outputs.append(im.crop(box))
-                img_tile_dict[i][j] = im.crop(box)
+        cols = int(self.img_width / col_width)
+        rows = int(self.img_width / row_height)
 
-        return img_tile_dict
+        if not effect:
+            import os
+            output_dir = f"{os.getcwd()}" + r"\tiles"
 
-    def merge_tiles(self, output_path, img_tiles, image_size=None, manipulate=True, subtlety=2, save_single=True, save_result=False, save_base=True, col_width=5, row_height=5):
+        coords = []
+        tile_filenames = {}
+        bbox_dict = {}
+        for row in range(0, rows):
+            tile_filenames[row] = {}
+            bbox_dict[row] = {}
+            for column in range(0, cols):
+                box = ((column * col_width)+(padding/2), (row * row_height)+(padding/2), (column * col_width +
+                    col_width)-(padding/2), (row * row_height + row_height)-(padding/2))
+                #outputs.append(im.crop(box))
+                tile = im.crop(box)
+                bbox_dict[row][column] = box
+                coords.append((row, column))
+                if not effect: # just save here immediately instead of going through merge
+                    with Image.new(mode="RGBA", size=tile.size, color=(255, 0, 0, 0)):
+                        crop_value = self.padding / 2
+                        box = (crop_value, crop_value, tile.size[0]-crop_value, tile.size[0]-crop_value)
+                        button = tile.crop(box=box)
+                        #button_cropped.paste(im=button, box=box)
+                        outp_path = os.path.join(output_dir, f"row_{row}_col_{column}.png")
+                        button.save(outp_path) # final file outputs
+                        tile_filenames[row][column] = outp_path
+
+        return image_path, coords, tile_filenames, bbox_dict
+
+    def merge_tiles(self, output_path, img_tiles, manipulate=True, subtlety=2, save_single=True, save_result=False, save_base=True):
         logger("merge_tiles")
         import os
 
         coord_to_img_dict = {}
 
-
         coords = []
         if save_result:
-            new_image = Image.new("RGB", image_size)
+            new_image = Image.new("RGB", (self.img_width, self.img_width))
+
         output_dir = f"{os.getcwd()}" + r"\tiles"
         for row in img_tiles:
             coord_to_img_dict[row] = {}
@@ -419,7 +368,7 @@ class image_manip_data: # at some point combine this with img_data but for now t
                 coords.append((row, column))
 
                 if manipulate:
-                    tile = img_manip_data.quantise_img(tile, combine=False, strength=subtlety, save_file=output_path, is_tile=True)
+                    tile = raw_img_data.quantise_img(tile, combine=False, strength=subtlety, save_file=output_path, is_tile=True)
                 if save_single:
                     with Image.new(mode="RGBA", size=tile.size, color=(255, 0, 0, 0)) as button_cropped:
                         crop_value = self.padding / 2
@@ -439,76 +388,65 @@ class image_manip_data: # at some point combine this with img_data but for now t
 
         return output_path, coord_to_img_dict, coords
 
-        """im.crop(box)"""
+    def split_img(self, image_path, grid_size, padding=8, effects=True):
+        logger("split_img")
+        # adapted from https://github.com/whiplashoo/split-image/blob/main/src/split_image/split.py
 
-        """box = (j * col_width, i * row_height, j * col_width +
-            col_width, i * row_height + row_height)
-        outputs.append(im.crop(box))
-        output_dict[i][j] = im.crop(box)"""
+        #import os
+        #print(f"im.size on opening for `{image_path}`: `{im.size}` f")
 
-img_manip_data = image_manip_data()
+        #name, ext = os.path.splitext(image_path)
+       # name = os.path.basename(name)
+        #output_dir = "./"
 
-def split_img(image_path, cols, rows, should_square=False, save_tiles_alone = False, padding=8, effects=True):
-    logger("split_img")
-    # adapted from https://github.com/whiplashoo/split-image/blob/main/src/split_image/split.py
+        self.img_width
+        col_width = int(self.img_width / grid_size) # currently all squares. Once I've got that working will play with rectangles but this is it for now.
+        row_height = int(self.img_width / grid_size)
+        #print(f"col w and h just before extract_tiles: {col_width} / {row_height}")
+        #print(f" cols: {cols} // rows: {rows}")
+        #image_dict = {"incoming_filename": image_path, "image_size": self.img_width, "col_width": col_width, "row_height": row_height, "padding": padding}
+        new_image, coords, img_tile_dict, bbox_dict = raw_img_data.extract_tiles(image_path, col_width, row_height, padding) # don't actually need to output new_image here as it's just image_path, but makes it easier to blend w/ merge_tiles output if needed later.
+        """if save_tiles_alone:
+            for n, item in enumerate(outputs):
+                outp_path = name + "_" + str(n) + ext
+                outp_path = os.path.join(output_dir, outp_path)
+                print("Exporting image tile: " + outp_path)
+                item.save(outp_path) # final file outputs
+
+        else: # assume we manipulate the image and reassemble"""
+        #print(f"Image size before sending to merge_tiles: `{im.size}`")
+        if effects:
+            new_image, coord_to_img_files, coords_list = raw_img_data.merge_tiles(output_path=image_path, img_tiles=img_tile_dict, manipulate=effects, subtlety = 1, save_single=True)
+
+        return new_image, coords, img_tile_dict, bbox_dict
+        # note: tile_img_dict is now [row][column]["tile_path"] and [bbox]. if effect==True, then ["tile_path" will not be added yet but in merge_tiles, which will become effects.]
+
+    #base_file = r"Screenshot 2026-04-18 233936_output.png"
+
+    def generate_img_grid(self, base_file, region_size=None, effects=False, padding=8, grid_size = 4, grid_data=None):
+        logger(f"Generate image grid for {base_file}")
+        if grid_data:
+            print("\nimg_manip got grid_data data\n\n")
+            padding = grid_data.gap
+            grid_size = grid_data.grid_size
+            region_size = grid_data.width, grid_data.height # here, 'region' is actually the full size of the image.
+        #input_filename = "image_name_for_testing.png" # r"Screenshot 2026-04-18 233936_output.png"
+
+        temp_file_filename = f"{base_file.replace('.png', '')}_temp.png"
+        print(f"\nABOUT TO GENERATE `{temp_file_filename}` from `{base_file}`\n")
+        raw_img_data.set_file_data(base_file = base_file, filename=temp_file_filename, region_size=region_size, padding=padding, grid_size=grid_size)
+        #input_filename = "manip_testing_2.png"
+        if effects:
+            raw_img_data.quantise_img(save_file = temp_file_filename, strength=1)
+
+        output_filename, coords_list, tiles_dict, bbox_dict = self.split_img(temp_file_filename, grid_size, padding=padding, effects=effects)
+
+        logger(f"Returning `{output_filename}` from generate_img_grid")
+        return output_filename, tiles_dict, bbox_dict, coords_list, self.img_width
 
 
-    import os
-    im = Image.open(image_path)
-    #print(f"im.size on opening for `{image_path}`: `{im.size}` f")
-    img_manip_data.img_size = im.size
-    name, ext = os.path.splitext(image_path)
-    name = os.path.basename(name)
-    output_dir = "./"
+raw_img_data = image_manip_data()
 
-    if should_square:
-        im_r = img_manip_data.square_image(im)
-        outp_path = name + "_squared" + ext
-        outp_path = os.path.join(output_dir, outp_path)
-        im_r.save(outp_path) # intermediary file output
-        im = im_r
 
-    img_manip_data.img_size = im.size
-    col_width = int(im.size[0] / cols)
-    row_height = int(im.size[1] / rows)
-    #print(f"col w and h just before extract_tiles: {col_width} / {row_height}")
-    #print(f" cols: {cols} // rows: {rows}")
-    image_dict = {"incoming_filename": image_path, "image_size": im.size, "col_width": col_width, "row_height": row_height, "padding": padding}
-    img_tile_dict = img_manip_data.extract_tiles(im, col_width, row_height, padding)
-    #print(f"OUTPUTS: {outputs}")
-
-    """if save_tiles_alone:
-        for n, item in enumerate(outputs):
-            outp_path = name + "_" + str(n) + ext
-            outp_path = os.path.join(output_dir, outp_path)
-            print("Exporting image tile: " + outp_path)
-            item.save(outp_path) # final file outputs
-
-    else: # assume we manipulate the image and reassemble"""
-    #print(f"Image size before sending to merge_tiles: `{im.size}`")
-    new_image, coord_to_img_files, coords_list = img_manip_data.merge_tiles(output_path=image_path, img_tiles=img_tile_dict, image_size=im.size, manipulate=effects, subtlety = 1, save_single=True, col_width=col_width, row_height=row_height)
-    return new_image, coord_to_img_files, coords_list, im.size
-    """  coord_to_img_files: [row_no][column_no]["tile_filename.png"]  """
-
-#base_file = r"Screenshot 2026-04-18 233936_output.png"
-
-def generate_img_grid(base_file, region_size=None, effects=False, padding=8, grid_size = 4, grid_data=None):
-    logger(f"Generate image grid for {base_file}")
-    if grid_data:
-        padding = grid_data.gap
-        grid_size = grid_data.grid_size
-        region_size = grid_data.width, grid_data.height # here, 'region' is actually the full size of the image.
-    #input_filename = "image_name_for_testing.png" # r"Screenshot 2026-04-18 233936_output.png"
-
-    temp_file_filename = f"{base_file.replace('.png', '')}_temp.png"
-    print(f"\nABOUT TO GENERATE `{temp_file_filename}` from `{base_file}`\n")
-    img_manip_data.set_file_data(base_file = base_file, filename=temp_file_filename, region_size=region_size)
-    #input_filename = "manip_testing_2.png"
-    if effects:
-        img_manip_data.quantise_img(save_file = temp_file_filename, strength=1)
-
-    new_image, coord_to_img_files, coords_list, img_size = split_img(temp_file_filename, grid_size, grid_size, should_square=True, save_tiles_alone = False, padding=padding, effects=effects)
-    logger(f"Returning `{new_image}` from generate_img_grid")
-    return new_image, coord_to_img_files, coords_list, img_size
 
 #generate_img_grid(base_file = "image_name_for_testing.png", effects=False)
