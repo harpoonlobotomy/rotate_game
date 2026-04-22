@@ -205,3 +205,9 @@ Need to formalise the references. I'm sending a heap of data to both g. and img_
     self.is_fullscreen
 
 are now all in theme_data.
+
+More improvements but yet again I'm running into 'graph is not finalised'. I wish I could easily see what caused that. I mean I understand it conceptually but I don't see it in this case.
+
+4.02pm
+okay the layout basically works now.
+Except if you go to the gallery and pick a new image, the text output ends up above the puzzle, when it's meant to be below. I think I have to hide/unhide them in the right order.

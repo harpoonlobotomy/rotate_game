@@ -252,8 +252,11 @@ class image_manip_data: # at some point combine this with img_data but for now t
         self.padding=padding
 
         with Image.open(base_file) as im:
-            im = im.resize(size=(int(target_width*.8), int(target_width*.8))) # 80% of the available height. currently assuming landscape, will adapt later.
-            with Image.new("RGBA", size=(int(target_width*.8), int(target_width*.8))) as new_im:
+            #im = im.resize(size=(int(target_width*.8), int(target_width*.8))) # 80% of the available height. currently assuming landscape, will adapt later.
+            im = im.resize(size=(int(target_width), int(target_width))) # 80% of the available height. currently assuming landscape, will adapt later.
+
+            #with Image.new("RGBA", size=(int(target_width*.8), int(target_width*.8))) as new_im:
+            with Image.new("RGBA", size=(int(target_width), int(target_width))) as new_im:
                 new_im.paste(im)
                 new_im.save(self.output_filename, format="png")
 
