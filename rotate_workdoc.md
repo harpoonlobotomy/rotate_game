@@ -213,3 +213,20 @@ okay the layout basically works now.
 Except if you go to the gallery and pick a new image, the text output ends up above the puzzle, when it's meant to be below. I think I have to hide/unhide them in the right order.
 
 5.38pm have the main window fading in/out now. It's neat.
+
+11:49am 23/4/26
+made thumbnails.
+
+next:
+make it get the real img from the thumbnail name. <-- done
+make the gallery a grid instead of a line that overshoots its bounds.
+
+3.01pm
+Also to note: Now, resizing the window
+gives you:
+aqua grid square
+'waiting to scramble'
+'-choose and image-'
+but no gallery or side panel to select from.
+
+Oh, actually - the gallery is down below the grid. So the issue is the grid not disappearing

@@ -3,7 +3,7 @@
 # for now just going to copy the vital bits here for planning.
 
 from PIL import Image, ImageEnhance, ImageDraw, ImageOps
-
+import os
 
 def logger(string):
     logging = False#True
@@ -252,15 +252,16 @@ class image_manip_data: # at some point combine this with img_data but for now t
         self.padding=padding
 
         with Image.open(base_file) as im:
+            if im.height != int(target_width) or im.width != int(target_width):
             #im = im.resize(size=(int(target_width*.8), int(target_width*.8))) # 80% of the available height. currently assuming landscape, will adapt later.
-            im = im.resize(size=(int(target_width), int(target_width))) # 80% of the available height. currently assuming landscape, will adapt later.
+                im = im.resize(size=(int(target_width), int(target_width))) # 80% of the available height. currently assuming landscape, will adapt later.
 
             #with Image.new("RGBA", size=(int(target_width*.8), int(target_width*.8))) as new_im:
-            with Image.new("RGBA", size=(int(target_width), int(target_width))) as new_im:
-                new_im.paste(im)
-                new_im.save(self.output_filename, format="png")
+                with Image.new("RGBA", size=(int(target_width), int(target_width))) as new_im:
+                    new_im.paste(im)
+                    new_im.save(self.output_filename, format="png")
 
-                print(f"Base image saved at: {self.output_filename}")
+                    print(f"Base image saved at: {self.output_filename}")
 
         self.region_height = target_width
         self.img_width = new_im.size[0]
@@ -435,7 +436,7 @@ class image_manip_data: # at some point combine this with img_data but for now t
             region_size = grid_data.width, grid_data.height # here, 'region' is actually the full size of the image.
         #input_filename = "image_name_for_testing.png" # r"Screenshot 2026-04-18 233936_output.png"
 
-        temp_file_filename = f"{base_file.replace('.png', '')}_temp.png"
+        temp_file_filename = f"{base_file.replace('.png', '').replace("gallery", "temp")}_temp.png"
         print(f"\nABOUT TO GENERATE `{temp_file_filename}` from `{base_file}`\n")
         raw_img_data.set_file_data(base_file = base_file, filename=temp_file_filename, region_size=region_size, padding=padding, grid_size=grid_size)
         #input_filename = "manip_testing_2.png"
@@ -450,6 +451,166 @@ class image_manip_data: # at some point combine this with img_data but for now t
 
 raw_img_data = image_manip_data()
 
+def move_focus(shift, image, x_gap, y_gap, x, y, box, strength=0, specify=False):
+    print(f"starting_box = {box}")
+    new_box = None
 
+    if specify:
+        new_box = (x_gap, y_gap, x_gap + x, y_gap + y)
 
+    elif shift.lower() == "l":
+        x_gap = x_gap/(2 + strength)
+        new_box = (x_gap, y_gap, x_gap + x, y_gap + y)
+    elif shift.lower() == "r":
+        x_gap = x_gap*(2 + strength)
+        new_box = (x_gap, y_gap, x_gap + x, y_gap + y)
+    else:
+        print(f"{shift} is not understood. Returning unchanged.")
+        cropped = image
+
+    if new_box:
+        print(f"NEW BOX: {new_box}")
+        cropped = image.crop(new_box)
+
+        a, b, c, d = box
+        e, f, g, h = new_box
+        left = a-e
+        right = c-g
+        print(f"diff: left: {left}, right: {right}")
+
+        if new_box:
+            box = new_box
+        return cropped, box
+
+def make_square_png(orig_dir = None, make_thumbnails=False, new_length = 200, force_make=False, thumbnail_dir=rf"{os.getcwd()}\\gallery_thumbnails\\"):
+
+    #print(f"directory : {listdir(f'{getcwd()}\\init_gallery\\')}\n")
+    gallery_dir = f'{os.getcwd()}\\gallery\\' # < - the images already squared. Should also set a max pixel size at some point.
+
+    if not orig_dir:
+        orig_dir = f'{os.getcwd()}\\init_gallery\\'
+
+    gallery_list = [f for f in os.listdir(orig_dir)]
+    print(f"Gallery list: {gallery_list}")
+    if make_thumbnails:
+        gallery_list =  [f for f in os.listdir(f'{gallery_dir}')]
+
+    gallery_list = list(i for i in gallery_list if ".png" in i.lower())
 #generate_img_grid(base_file = "image_name_for_testing.png", effects=False)
+    for i in gallery_list:
+
+        if make_thumbnails:
+            path = f"{gallery_dir}{i}"
+        else:
+            path = f"{orig_dir}{i}"
+
+        with Image.open(path) as im:
+            if make_thumbnails:
+                path = f"{thumbnail_dir}{i}"
+            #print(f"Path: {path}")
+            else:
+                path = path.replace("init_gallery", "gallery")
+            #print(f"Path: {path}")
+            if ("_squared.png" in i.lower() and not make_thumbnails) or ("_thumbnail.png" in i.lower() and make_thumbnails):
+                filename = i
+            else:
+                filename = i.replace(" ", "_").replace(".png", "")
+                if len(filename) > 10:
+                    filename = filename[:10]
+
+                if make_thumbnails:
+                    filename = path.replace(i, filename)
+                    filename = filename + "_thumbnail.png"
+                else:
+                    if "_squared" not in filename:
+                        filename = path.replace(i, filename) + "_squared.png"
+
+            if os.path.isfile(filename) and not force_make:
+                print(f"{filename} already exists, skipping.")
+                continue
+            #print(f"Filename: {filename}")
+            starting_size = im.size
+            #im.show()
+            print(f"Starting size for {filename}: {starting_size}")
+            x, y = starting_size
+            if x != y:
+
+                if x < y:
+                    new_x = x
+                    new_y = x
+                else:
+                    new_x = y
+                    new_y = y
+
+                print(f"new_x: {new_x}")
+                print(f"new_y: {new_y}")
+                x_diff = x - new_x
+                y_diff = y - new_y
+                x_diff = abs(x_diff)
+                y_diff = abs(y_diff)
+                print(f"x_diff: {x_diff} / y_diff: {y_diff}")
+
+                x_gap = x_diff / 2
+                y_gap = y_diff / 2
+
+                print(f"x_gap = {x_gap} / y_gap: {y_gap}")
+                """
+    left: The x-coordinate of the leftmost edge.
+    upper: The y-coordinate of the top edge.
+    right: The x-coordinate of the rightmost edge.
+    lower: The y-coordinate of the bottom edge.
+                """
+            #im = im.resize(size=(int(target_width*.8), int(target_width*.8))) # 80% of the available height. currently assuming landscape, will adapt later.
+                box = (x_gap, y_gap, x_gap + new_x, y_gap + new_y)
+                cropped = im.crop(box = box)
+                cropped.show()
+                test = input("Is this correct? enter `r` or `l` to move the focus, 'undo' to terminate, or nothing to continue as is.")
+                if test:
+                    strength = 0
+                    while test:
+                        if test.lower() == "undo":
+                            print(f"Terminating, please make required alterations. {i} has not been altered.")
+                            break
+                        cropped, box = move_focus(test, im, x_gap, y_gap, new_x, new_y, box, strength)
+                        cropped.show()
+                        test = input("Is this correct? enter `r` or `l` to move the focus, `undo` to go back to the original, or nothing to continue as is.")
+                        strength += 1
+
+                if test and test.lower() == "undo":
+                    test = input("Do you want to give more specific instruction, or just cancel?")
+                    if not test:
+                        break
+                    while test:
+                        if test.lower() == "undo":
+                            print(f"Terminating, please make required alterations. {i} has not been altered.")
+                            break
+                        test = input(f"Current x_gap is {x_gap}. Please enter the new x_gap you wish to use, as an integer.")
+                        try:
+                            x_gap = int(test.strip())
+                            cropped, box = move_focus(test, im, x_gap, y_gap, new_x, new_y, box, specify=True)
+                            cropped.show()
+                            test = input("Is this correct? If not, enter the new value you wish to use, or `undo` to go back to the original. Otherwise, just hit enter to save.")
+                        except:
+                            print(f"Could not recognise `{test}` as an integer.")
+
+
+                #break
+                    #im = im.resize(size=(int(target_width), int(target_width))) # 80% of the available height. currently assuming landscape, will adapt later.
+
+            #im.paste(im, )
+                with Image.new("RGB", (cropped.width, cropped.height)) as new_image:
+                    new_image.paste(cropped)
+
+            else:
+                with Image.new("RGB", (x, y)) as new_image:
+                    new_image.paste(im)
+
+            if make_thumbnails:
+                new_image = new_image.resize(size=(new_length, new_length))
+
+                print(f"make_thumbnails new size: {new_image.size}")
+
+            new_image.save(filename, "PNG")
+            break
+        #raw_img_data.set_file_data(i, filename, region_size=None, padding=9, grid_size=4)
+make_square_png()

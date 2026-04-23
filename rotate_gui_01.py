@@ -380,17 +380,15 @@ def initial_setup(base_file):
     from img_manipulation import raw_img_data
 
     print("Going to generate_img_grid from ln274")
-    #base_file, coord_to_img_files, coords_list, image_size = raw_img_data.generate_img_grid(base_file, g.region_size, grid_size=g.grid_size)
     g.puzzle_img_filename, g.coord_to_img_files, g.bbox_dict, g.coords_list, g.img_width = raw_img_data.generate_img_grid(base_file, g.target_image_size, grid_size=t.grid_size)
     g.grid_size = t.grid_size
-    print(f"g.coord_to_img_files: \n{g.coord_to_img_files}\n")
+    #print(f"g.coord_to_img_files: \n{g.coord_to_img_files}\n")
 
 
     g.unordered_child_dict = g.generate_children(g.coords_list)
     g.align_children()
 
     g.make_clean_dict()
-
 
     logger("getting child dict in initial_setup")
     return
@@ -403,8 +401,28 @@ def main_window(start_hidden=True):
         b.by_coord = {} # actively remove those references if not start_screen (eg when changing grid sizes when in a puzzle)
         b.buttons = set()
 
-    gallery_list = ["testing/lex.png", "rave_shaman.png"]
+    #gallery_list = ["testing/lex.png", "rave_shaman.png"]
+    #gallery_list = "./gallery/"
+    def make_gallery_list():
+        from os import listdir, getcwd
+        from os.path import isfile, join
+        raw_directory = f"{getcwd()}\\init_gallery\\"
+        thumbs_dir = f"{getcwd()}\\gallery_thumbnails\\"
+        #gallery_list = [f"{directory}\\{f}" for f in listdir(directory) if isfile(join(directory, f))]
+        #gallery_list = list(i for i in gallery_list if ".png" in i.lower())
 
+        print(fr'gallery_thumbnails: {thumbs_dir}')
+        force_make_thumbs = True
+        if not listdir(thumbs_dir) or force_make_thumbs:
+            print("Making thumbnails.")
+            from img_manipulation import make_square_png
+            make_square_png(orig_dir = raw_directory, make_thumbnails=True, new_length = 200, force_make = force_make_thumbs, thumbnail_dir=thumbs_dir)
+
+        gallery_list = [f"{thumbs_dir}\\{f}" for f in listdir(thumbs_dir) if isfile(join(thumbs_dir, f)) and ".png" in f.lower()]
+        #gallery_list = list(i for i in gallery_list if )
+        return gallery_list
+
+    gallery_list = make_gallery_list()
     font_size = 14
 
     show_stretchers = None#"yellow"
@@ -703,8 +721,6 @@ def main_window(start_hidden=True):
 
 ###################################################################################
 
-
-    #gallery_source = "manip_testing_2.png" # make a list/dict later and generate from that. this'll do for now.
     def fade_in_out(fade_in=False):
         print(f"window.alpha_channel: {window.alpha_channel}")
         if fade_in:
@@ -725,7 +741,6 @@ def main_window(start_hidden=True):
                 window.refresh()
                 sleep(.06)
             window.set_alpha(0)
-
 
 
     def setup_button(text, key=None, size=None, font="courier 12", start_disabled=False, colour=t.button_colour, tooltip=None):
@@ -765,7 +780,6 @@ def main_window(start_hidden=True):
             if expand_y:
                 window[key].expand(expand_y=True, expand_row=True)
 
-        #window[key].update(visible=not collapse)
         if other_key:
             if collapse:
                 window[other_key].unhide_row()
@@ -777,18 +791,29 @@ def main_window(start_hidden=True):
                     window[key].expand(expand_y=False, expand_row=False)
 
 
-            #window[other_key].update(visible=collapse)
+    def get_panel_dimensions():
+        g.central_region_size = window["central"].get_size()
+        g.grid_panel_size = window['grid_panel'].get_size()
+        g.grid_panel_size = (g.grid_panel_size[1], g.grid_panel_size[1])
+        #g.target_image_size = (int(g.central_region_size[1]*.8), int(g.central_region_size[1]*.8))
+        g.target_image_size = (int(g.grid_panel_size[1]*.9), int(g.grid_panel_size[1]*.9))
 
     def button_yielder():
         #buttons = list((sg.Canvas(pad=0, background_color="yellow"), sg.Text("Click an image to use it as the base for the puzzle.")))
-        buttons = list()
+        add_buttons = list()
         #buttons.append(sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour))
-        add_buttons = list(sg.Button(button_text="", image_filename=i, image_source=i, image_subsample=2, key=f"imgkey_{i}", image_size=(200,200)) for i in gallery_list)
-        for b in add_buttons:
-            buttons.append(b)
-        #buttons.append(sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour))
-        return buttons
+        for i in gallery_list:
+            print(i)
+            try:
+                add_buttons.append(sg.Button(button_text="", image_source=i, file_types=(("ALL files", ".*"),), key=f"imgkey_{i}", image_size=(200,200)))
+                print(f"Button for {i} appended to list")
+            except:
+                print(f"Could not make button from {i}")
+    #    add_buttons = list(sg.Button(button_text="", image_filename=i, image_source=i, image_subsample=2, key=f"imgkey_{i}", image_size=(200,200)) for i in gallery_list)
+           # buttons.append(b)
 
+        #buttons.append(sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour))
+        return add_buttons
 
     grid = g.make_grid(simple=True)
 
@@ -810,9 +835,7 @@ def main_window(start_hidden=True):
             [sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour),
                     sg.Frame(title="", layout=text_layout, element_justification="center"),
                     sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour)],
-
         ]
-
 
 
 #### Side panel ###
@@ -917,7 +940,7 @@ def main_window(start_hidden=True):
     logger("main window init'd")
     last_held_xy = None
     if t.maximise_window:
-        window.Maximize()
+        #window.Maximize()
         t.maximised_size = tuple(window.size)
 
     start_screen_checked = False
@@ -953,11 +976,8 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                 print(f"captured grid_panel size: {g.grid_panel_size}")
                 size_got=True
                 hide_grid=True
-                region_size = window["central"].get_size()
-                g.central_region_size = region_size
-                g.grid_panel_size = window['grid_panel'].get_size()
-                g.grid_panel_size = (g.grid_panel_size[1], g.grid_panel_size[1])
-                g.target_image_size = (int(region_size[1]*.8), int(region_size[1]*.8))
+                get_panel_dimensions()
+
                 g.start_screen = False
 
         if event and event.startswith("imgkey_"):
@@ -969,13 +989,13 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
             window["gallery"].expand(expand_y=False, expand_row=False)
             print(f"squared region size: {g.grid_panel_size}")
             print(f"target image size (80% of grid region size): {g.target_image_size}")
-            g.puzzle_img_filename = selected_imgname
+            g.puzzle_img_filename = selected_imgname.replace("_thumbnails\\", "").replace("_thumbnail", "_squared")
             g.new_grid = True
             g.coord_to_img_files = {}
             g.coords_list = []
 
             g.start_screen=False
-            initial_setup(selected_imgname)#, width=region_size[0], height=region_size[1])
+            initial_setup(g.puzzle_img_filename)#, width=region_size[0], height=region_size[1])
 
             g.set_up_gridClass()
             print(f"g.target_image_size before set_up_grid: {g.target_image_size}")
@@ -1100,25 +1120,27 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                         t.maximise_window = True
                     else:
                         t.maximise_window = False
-                    new_screen_x, new_screen_y = window.size
+                        new_screen_x, new_screen_y = window.size
 
-                    if new_screen_x == t.screen_x and new_screen_y == t.screen_y:
-                        continue
-                    else:
-                        reset = False
-                        #print(f"new_screen_x, new_screen_y: {new_screen_x}, {new_screen_y}")
-                        max_x = max(new_screen_x - t.screen_x, t.screen_x - new_screen_x)
-                        #print(f"MAX X DIFF: {max_x}")
-                        max_y = max(new_screen_y - t.screen_y, t.screen_y - new_screen_y)
-                        #print(f"MAX Y DIFF: {max_y}")
-                        if max_x > 100 or max_y > 100:
-                            reset = True
+                        if new_screen_x == t.screen_x and new_screen_y == t.screen_y:
+                            continue
+                        else:
+                            reset = False
+                            #print(f"new_screen_x, new_screen_y: {new_screen_x}, {new_screen_y}")
+                            max_x = max(new_screen_x - t.screen_x, t.screen_x - new_screen_x)
+                            #print(f"MAX X DIFF: {max_x}")
+                            max_y = max(new_screen_y - t.screen_y, t.screen_y - new_screen_y)
+                            #print(f"MAX Y DIFF: {max_y}")
+                            if max_x > 100 or max_y > 100:
+                                reset = True
 
-                        if reset:
-                            t.screen_x = new_screen_x
-                            t.screen_y = new_screen_y
-                            window.close()
-                            break
+                            if reset:
+                                t.screen_x = new_screen_x
+                                t.screen_y = new_screen_y
+                                #window.close()
+                                #break
+                                get_panel_dimensions()
+                                window.refresh()
 
         if window.is_closed():
             #print("window is closed.")
