@@ -230,3 +230,10 @@ aqua grid square
 but no gallery or side panel to select from.
 
 Oh, actually - the gallery is down below the grid. So the issue is the grid not disappearing
+
+8.30pm
+Fixed the transition from grid>gallery>new grid. Want to make the transition softer, but it works.
+Also the gallery is now a grid formed from the contents of the gallery folder, vastly improved.
+
+'start over' doesn't properly replace the wrong tiles with the proper ones, it just displays them. I thought I fixed that before but maybe I just got distracted.
+Custom images aren't saved to init like they're meant to be
