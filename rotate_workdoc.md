@@ -362,4 +362,33 @@ Okay. Good.
 Currently the main script is set up to use the latter format, but the grid requires it's made because it has to generate the tiles itself anyway.
 
 initial_grid_drawing does a full for loop of rows + tiles to generate its own dict...
-When all it needs to do is adapt to the existing bbox dict and make the relevant buttons. Okie. Can do that. 
+When all it needs to do is adapt to the existing bbox dict and make the relevant buttons. Okie. Can do that.
+
+Also: if I change the grid size, I need to re-disable the autofix + hint buttons. <- done that now.
+
+Okay. So I removed that second bbox and adapted it. Slight issue, the images are now off-centre in their tiles. They're all very slightly too far right and down.
+
+clicking on (0,0), click_off draws image here:
+
+(10.0, 168.0)
+
+even though the gridsquare's position is actually
+((4.0, 4.0), (154.0, 154.0))
+
+The initial placement is fine, it's after rotation as child that it's offset.
+
+making test colourblock images so I can test. Have discovered that 'scramble' is not reenabled if you set the image via user selection, and 'change grid size' also does nothing. Oops.
+
+Okay. Think it's sorted now. They seem far more even again. Not sure exactly when/why that started but it appears better now. There still seems to be some slight inconsistency but I'm guessing it's just where pixels align, it's very subtle so that would be fair. also just visually at the 1-2px scale it's hard to be certain especially with colour and the changing gridsquare outlines. Going to move on for now.
+
+3.15pm
+Working on the window resizing.
+In grid mode, the side panale is retained until it's crushed by the grid itself, as the grid doesn't resize.
+In gallery mode, it's crushed immediately by the thumbnails.
+
+6.36pm
+worked on the resizing for a bit, but the lag as it remakes all the thumbnails is a bit much, especially when it also has to make the tiles. Not too bad for small gridsizes but it'd be a grind for bit ones. And it just looks bad.
+
+Still haven't gotten the layout perfect. Removed the 'stick' holding "central" open and it broke as expected. Need to do it better.
+
+For now I've locked into fullscreen mode. Will play around with it more later.

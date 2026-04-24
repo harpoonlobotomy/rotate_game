@@ -340,11 +340,13 @@ class image_manip_data: # at some point combine this with img_data but for now t
             for column in range(0, cols):
                 box = ((column * col_width)+(padding/2), (row * row_height)+(padding/2), (column * col_width +
                     col_width)-(padding/2), (row * row_height + row_height)-(padding/2))
+                sep_box = (((column * col_width)+(padding/2), (row * row_height)+(padding/2)), ((column * col_width +
+                    col_width)-(padding/2), (row * row_height + row_height)-(padding/2)))
                 if row == 0  and column == 0:
                     print(f"\n\nimage width: {self.img_width} // padding: {padding}// col_width: {col_width}\n\n0,0 img_manip bbox:\n{box}\n\n")
                 #outputs.append(im.crop(box))
                 tile = im.crop(box)
-                bbox_dict[row][column] = box
+                bbox_dict[row][column] = sep_box#box
                 coords.append((row, column))
                 if not effect: # just save here immediately instead of going through merge
                     with Image.new(mode="RGBA", size=tile.size, color=(255, 0, 0, 0)):
@@ -486,42 +488,43 @@ def move_focus(shift, image, x_gap, y_gap, x, y, box, strength=0, specify=False)
             box = new_box
         return cropped, box
 
-def make_square_png(add_image = None, make_squares=True, make_thumbnails=True, thumbnail_size = 200, force_make=False):
+def make_square_png(add_image = None, make_squares=True, make_thumbnails=True, thumbnail_size = 200, force_make=False, force_thumbnails=False):
 
+    print(f"make_square_png. make_squares: {make_squares} // make_thumbnails: {make_thumbnails} // force_make: {force_make} // force_thumbnails: {force_thumbnails}")
     #print(f"directory : {listdir(f'{getcwd()}\\init_gallery\\')}\n")
     thumb_filepath = square_filepath = None
 
-    orig_dir = rf'{os.getcwd()}\\init_gallery\\'
-    user_dir = rf'{os.getcwd()}\\user_gallery\\'
+    orig_dir = f'{os.getcwd()}\\init_gallery\\'
+    user_dir = f'{os.getcwd()}\\user_gallery\\'
     init_name_list = [f for f in os.listdir(orig_dir) if ".png" in f.lower()] # init_name_list == only filenames. The others include full paths.
-    user_name_list = rf"{os.getcwd}\\user_images.txt"
+    user_name_list = f"{os.getcwd}\\user_images.txt"
 
     if add_image:
         filename = os.path.basename(add_image)
         if not os.path.isfile(add_image):
             print(f"{add_image} is not a valid filename.")
-            return
+            return squared_dir, thumb_dir, thumb_list
         if init_name_list and filename in init_name_list:
             print(f"File {filename} already in main file.")
-            return
+            return squared_dir, thumb_dir, thumb_list
         elif os.path.isfile(user_name_list):
             with open(file=user_name_list) as username_list:
                 if filename in username_list:
                     print(f"File {filename} already in user gallery.")
-                    return
+                    return squared_dir, thumb_dir, thumb_list
         else:
             with Image.open(add_image) as im:
                 filename = orig_dir + filename
                 im.save(filename, "PNG")
                 init_name_list.append(filename)
 
-    thumb_dir = rf"{os.getcwd()}\\gallery_thumbnails\\"
-    squared_dir = rf'{os.getcwd()}\\gallery\\' # < - the images already squared. Should also set a max pixel size at some point.
+    thumb_dir = f"{os.getcwd()}\\gallery_thumbnails\\"
+    squared_dir = f'{os.getcwd()}\\gallery\\' # < - the images already squared. Should also set a max pixel size at some point.
 
-    init_list = [fr"{orig_dir}{f}" for f in os.listdir(orig_dir) if ".png" in f.lower()] # init_list == only filenames. The others include full paths.
+    #init_list = [fr"{orig_dir}{f}" for f in os.listdir(orig_dir) if ".png" in f.lower()] # init_list == only filenames. The others include full paths.
     thumb_list = [fr"{thumb_dir}{f}" for f in os.listdir(thumb_dir) if ".png" in f.lower()]
     squared_list = [fr"{squared_dir}{f}" for f in os.listdir(squared_dir) if ".png" in f.lower()]
-    if (init_name_list and thumb_list and squared_list) and len(init_name_list) == len(thumb_list) == len(squared_list):
+    if (init_name_list and thumb_list and squared_list) and len(init_name_list) == len(thumb_list) == len(squared_list) and not force_thumbnails:
         print("Same count of initial images, thumbs and squared. Not generating new.")
         return squared_dir, thumb_dir, thumb_list
 
@@ -532,9 +535,19 @@ def make_square_png(add_image = None, make_squares=True, make_thumbnails=True, t
             path = fr"{orig_dir}{i}"
 
         if not make_thumbnails and not force_make and "_squared" in i:
-            if os.path.isfile(f"{squared_dir}{i}") and not force_make:
+            if os.path.isfile(f"{squared_dir}{i}") and not force_make and not force_thumbnails:
                 print(f"{path} // `{squared_dir}{i}` already exists, skipping.")
                 continue
+
+        if force_thumbnails: # only works for later operations when we know _squared exists.
+            i = i.replace("_squared", "")
+            filename = i.replace(" ", "_").replace(".png", "")
+            if len(filename) > 10:
+                filename = filename[:10]
+            output_path = squared_dir
+            suffix = "_squared.png"
+            square_filepath = f"{output_path}{filename}{suffix}"
+            path = square_filepath
 
         with Image.open(path) as im:
             i = i.replace("_squared", "")
@@ -547,18 +560,18 @@ def make_square_png(add_image = None, make_squares=True, make_thumbnails=True, t
                 suffix = "_thumbnail.png"
                 thumb_filepath = f"{output_path}{filename}{suffix}"
 
-            if make_squares:
+            if make_squares and not force_thumbnails:
                 output_path = squared_dir
                 suffix = "_squared.png"
                 square_filepath = f"{output_path}{filename}{suffix}"
 
             for filename in (thumb_filepath, square_filepath):
                 skip = False
-                if os.path.isfile(filename) and not force_make:
+                if os.path.isfile(filename) and not force_make and ((force_thumbnails and filename != thumb_filepath) or not force_thumbnails):
                     print(f"{filename} already exists, skipping.")
                     skip=True
-                    continue
-            if skip:
+
+            if skip and not force_thumbnails:
                 continue
 
             print(f"FILENAME FOR {i}: {filename}")
@@ -639,15 +652,33 @@ def make_square_png(add_image = None, make_squares=True, make_thumbnails=True, t
                 with Image.new("RGB", (x, y)) as new_image:
                     new_image.paste(im)
 
-            print(f"ABOUT TO SAVE IMAGE: {filename}")
-            if make_squares:
+            if make_squares and not force_thumbnails:
+                print(f"ABOUT TO SAVE IMAGE: {filename}")
                 new_image.save(square_filepath, "PNG")
 
             if make_thumbnails:
+                print(f"ABOUT TO SAVE THUMBNAIL: {thumb_filepath}")
                 new_image = new_image.resize(size=(thumbnail_size, thumbnail_size))
                 new_image.save(thumb_filepath, "PNG")
 
-        return squared_dir, thumb_dir, thumb_list
+    return squared_dir, thumb_dir, thumb_list
         #raw_img_data.set_file_data(i, filename, region_size=None, padding=9, grid_size=4)
 
-make_square_png()
+def generate_image(img_width=500, intent="colour_blocks", gridsize=5):
+
+    with Image.new("RGB", (img_width, img_width)) as new_image:
+        if intent == "colour_blocks":
+            from random import randint
+            column_width = int(img_width/gridsize)
+            for col in range(0, gridsize+1):
+                with Image.new("RGB", (column_width, img_width), color=(randint(0, 225), randint(0, 225), randint(0, 225))) as column:
+                    new_image.paste(im=column,  box=(column_width * col, 0))
+                    #new_image.paste(column)
+            new_image.show()
+            new_image.save("testing_squares.png")
+
+
+
+#generate_image()
+#make_square_png()
+
