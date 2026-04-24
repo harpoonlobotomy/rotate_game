@@ -27,6 +27,7 @@ class theme_data():
         self.background_colour = settings_data["background_colour"]
         self.default_screen_size = settings_data["screen_size"]
         self.is_fullscreen = settings_data["fullscreen"]
+        self.is_grid_screen = False #marker for which panels are in view.
 
     theme_dict:dict = {
         "arcade": {'BACKGROUND': "#38354a",#31374e",
@@ -128,7 +129,8 @@ class buttonClass:
 
     def button_press(self, coord:buttonInstance):
         logger(f"BUTTON PRESS: {coord}")
-
+        print(f"BUTTON PRESS: {coord}")
+        #print(f"g.clean_dict[coord]: {g.clean_dict[coord]}")
         rotated_children = {}
         if isinstance(coord, str) or isinstance(coord, tuple):
             if isinstance(coord, str):
@@ -141,30 +143,8 @@ class buttonClass:
             orig_index = list(children).index(child)
             new_index = list(reordered).index(child)
             rotated_children[list(children)[orig_index]] = (children[list(children)[new_index]], b.by_coord[children[list(children)[orig_index]]].current_image)
+
         return rotated_children
-
-    def set_up_buttons(self, g):
-
-        logger("set_up_buttons")
-
-        """def get_children():
-
-            cleaned_children = {}
-            for entry in self.clean_dict:
-                cleaned_children[entry] = {}
-                for position, coord in self.clean_dict[entry]["children"].items():
-                    cleaned_children[entry][position] = coord
-
-            for entry in self.clean_dict:
-                self.clean_dict[entry]["children"] = cleaned_children[entry]
-"""
-
-                #print(f"\n\nclean dict: \n\n{self.clean_dict}\n\n")
-
-        extra_print(f"\n\nclean dict: \n\n{self.clean_dict}\n\n")
-        logger("going to make_row_column_dict from set_up_buttons")
-        #self.make_clean_dict()
-        #removed get_children because it literally added nothing, just redid 'children' though it was already fully done.
 
 b = buttonClass()
 
@@ -204,27 +184,26 @@ class gridClass:
 
     def __init__(self):
         logger("init gridClass")
-        self.unordered_child_dict = {} # don't imagine I need this but here for now.
+        #self.unordered_child_dict = {} # don't imagine I need this but here for now.
         self.ordered_children = {}
         self.puzzle_img_filename:str = None
         self.coord_to_img_files:dict = {} # < -- [row][column] > onward
         self.clean_dict = {} # < -- [coords] > onward
         self.bbox_dict = {}
-        self.coords_list = []
         self.grid:sg.Graph = None#self.make_grid(simple=True)
         self.grid_size = t.grid_size
         self.rows:int = self.grid_size
         self.cols:int = self.grid_size
-        self.img_width = t.screen_y/2 if t.screen_x > t.screen_y else t.screen_x/2
-        self.cell_w = self.img_width / self.rows
-        self.cell_h = self.img_width / self.cols
-        self.target_image_size = 500 # derived from element size, not img pixels.
         self.padding = 6
+
+        self.img_width = t.screen_y/2 if t.screen_x > t.screen_y else t.screen_x/2
+        self.cell_w = int(self.img_width / self.rows)
+        self.cell_h = int(self.img_width / self.cols)
+        self.target_image_size = 500 # derived from element size, not img pixels.
 
         self.grid_region_size  = (50,50) # <- just the grid area itself (img sized)
         self.grid_panel_size = (125, 125) # the magenta around the grid
         self.central_region_size = (150,150) # <- entire maroon area
-        #self.new_grid = True
         self.start_screen = True # whether to open window to the gallery or not
         self.rotations_count = None
 
@@ -232,6 +211,13 @@ class gridClass:
 
     def clear_grid_data(self):
         print("run this to clear all grid data.\nalso use this to trigger an equivalent fn in buttonClass.")
+        self.ordered_children = self.clean_dict = self.bbox_dict = self.coord_to_img_files = self.unordered_child_dict = {}
+        self.puzzle_img_filename:str = None # <- maybe/maybe not, need to see.
+        self.grid:sg.Graph = None#self.make_grid(simple=True)
+        self.target_image_size = 500 # derived from element size, not img pixels.
+        self.grid_region_size  = (50,50) # <- just the grid area itself (img sized)
+        self.grid_panel_size = (125, 125) # the magenta around the grid
+        self.central_region_size = (150,150) # <- entire maroon area
 
     def make_grid(self, simple=True):
 
@@ -241,7 +227,6 @@ class gridClass:
                 width = t.screen_y*.66
             else:
                 width = t.screen_x*.66
-
         else:
             width = g.target_image_size
 
@@ -257,8 +242,8 @@ class gridClass:
     def set_up_gridClass(self):
         self.rows = self.grid_size
         self.cols = self.grid_size # separate in case I do rectangles later.
-        self.cell_w = self.target_image_size[0] / self.cols
-        self.cell_h = self.target_image_size[0] / self.rows
+        self.cell_w = int(self.target_image_size[0] / self.cols)
+        self.cell_h = int(self.target_image_size[0] / self.rows)
 
         if not self.padding:
             self.padding = 6
@@ -285,9 +270,10 @@ class gridClass:
         return new_children
 
 
-    def align_children(self, selected_coord=None): # adding this so I can get the children in the correct 0,1,2,3 order to rotate properly.
+    def align_children(self, selected_coord=None, unordered_children={}): # adding this so I can get the children in the correct 0,1,2,3 order to rotate properly.
         logger("align_children")
-        for point, children in self.unordered_child_dict.items():
+        for point, children in unordered_children.items():
+            #print(f"point, children in unordered_child_dict: {point} / {children}")
             point_x, point_y = point
             if selected_coord and point != selected_coord:
                 print(f"selected_coord and point != selected cooord: {selected_coord}")
@@ -308,8 +294,9 @@ class gridClass:
                     self.ordered_children[point]["left"] = child
                 else:
                     print(f"Coord is not top/bottom/left/right of {point}: {child}\ncoord x: {x}, main_point x: {point_x}")
-
+            #print(f"self.ordered_children[point]: {self.ordered_children[point]}")
             self.ordered_children[point] = self.order_children(self.ordered_children[point])
+            #print(f"self.ordered_children[point] after: {self.ordered_children[point]}\n")
 
     def generate_children(self, coords_list):
         logger("generate_children")
@@ -335,9 +322,9 @@ class gridClass:
                     self.clean_dict[coord] = {"children": g.ordered_children[(row_no, col_no)], "target_image": filename}
 
 
-    def new_image(self, full_img, coord_to_img_files=None, coords_list=None, size=None):#(g.width, g.height)):
+    """def new_image(self, full_img, coord_to_img_files=None, coords_list=None, size=None):#(g.width, g.height)):
         logger("gridClass new_image")
-        """To make sure these are properly reset when the image is selected/changed"""
+        ""To make sure these are properly reset when the image is selected/changed""
         print(f"in new_image:\nfull_img: {full_img}, coord_to_img_files: {coord_to_img_files}, coords_list: {coords_list}, size: {size}")
         if not size:
             size = (self.img_width, self.img_width)
@@ -370,7 +357,7 @@ class gridClass:
         #logger("after align_children in new_image")
         #from rotate_01 import base_positions, image_data
         b.set_up_buttons(g)
-        logger("after set_up_buttons in new_image")
+        logger("after set_up_buttons in new_image")"""
 
 
 g = gridClass()
@@ -382,13 +369,13 @@ def initial_setup(base_file):
     from img_manipulation import raw_img_data
 
     print("Going to generate_img_grid from ln274")
-    g.puzzle_img_filename, g.coord_to_img_files, g.bbox_dict, g.coords_list, g.img_width = raw_img_data.generate_img_grid(base_file, g.target_image_size, grid_size=t.grid_size)
+    g.puzzle_img_filename, g.coord_to_img_files, g.bbox_dict, coords_list, g.img_width = raw_img_data.generate_img_grid(base_file, g.target_image_size, grid_size=t.grid_size, padding = g.padding)
     g.grid_size = t.grid_size
     #print(f"g.coord_to_img_files: \n{g.coord_to_img_files}\n")
+    #print(f"g.bbox_dict from raw_img_data:\n{g.bbox_dict}")
 
-
-    g.unordered_child_dict = g.generate_children(g.coords_list)
-    g.align_children()
+    unordered_child_dict = g.generate_children(coords_list)
+    g.align_children(unordered_children=unordered_child_dict)
 
     g.make_clean_dict()
 
@@ -463,6 +450,7 @@ def main_window(start_hidden=True):
 
 
     def set_difficulty():
+        # NOTE: Does not do anything of actual difficulty rn.
         t.difficulty += 1
         if t.difficulty >= 3:
             t.difficulty = 0
@@ -508,9 +496,9 @@ def main_window(start_hidden=True):
         for button in incorrect_buttons:
             button:buttonInstance
             if fix_incorrect:
-                new_image = button.target_image
-            else:
-                new_image = button.current_image
+                button.current_image = button.target_image
+
+            new_image = button.current_image
             x, y = button.coords
             update_clicked_square(x, y, new_image, click_off=True)
             #window[str(button.coords)].update(button_color=("black", saved_colours[button]))
@@ -562,6 +550,7 @@ def main_window(start_hidden=True):
                     window.refresh()
                     #col_print(f"Children to rotate: {rotated_children}")
                     #update_clicked_square(row, column, click_off=False)
+            print(f"ROTATED CHILDREN: {rotated_children}")
             rotate_children(rotated_children)
         t.clicks = 0
 
@@ -592,9 +581,9 @@ def main_window(start_hidden=True):
         #g.grid = set_up_grid(g.puzzle_img_filename, g.grid_region_size)
         #g.grid = set_up_grid(g.puzzle_img_filename, g.grid_region_size)
         tile_bounding_boxes = {}
+        b.by_coord = {}
         print("about to draw image")
         g.grid.draw_image(filename=g.puzzle_img_filename, location=(0, 0))
-
         add_button_gap = True
         print(f"g.width: {g.img_width} // g.height: {g.img_width}")
         for row in range(0, int(g.img_width/g.cell_w)):
@@ -608,6 +597,8 @@ def main_window(start_hidden=True):
                     top_left = g.cell_w*column, g.cell_h*row
                     bottom_right = g.cell_w*(column+1), g.cell_h * (row+1)
                 button_box = top_left, bottom_right
+                if row == 0  and column == 0:
+                    print(f"\n\nimage width: {g.img_width} // padding: {g.padding} // col_width: {g.cell_w}\n0,0 gui bbox:\n{button_box}\n\n")
                 tile_bounding_boxes[row][column] = button_box
                 make_button((row, column))
             #print(f"top left: {top_left} // bottom right: {bottom_right}")
@@ -638,16 +629,22 @@ def main_window(start_hidden=True):
         window["grid"].update()
 
 
-    def set_during_buttons_enable(enable=True):
-
-        window["set_scramble"].update(disabled = not enable)
+    def set_during_buttons_enable(enable=True, include_scramble = True):
+        if include_scramble:
+            window["set_scramble"].update(disabled = not enable)
         window["get_hint"].update(disabled = not enable)
         window["set_perfect"].update(disabled = not enable)
 
 
-    def set_gridsize():
-        new_gridsize = sg.popup_get_text(message=f"Current gridsize is {g.grid_size}. Please enter a new gridsize.", title="Enter a new grid size value")
-        if new_gridsize:
+    def set_gridsize(new_gridsize):
+        #new_gridsize = sg.popup_get_text(message=f"Current gridsize is {g.grid_size}. Please enter a new gridsize.", title="Enter a new grid size value")
+        new_gridsize = int(new_gridsize.replace("gridsize_", ""))
+        if new_gridsize != t.grid_size:
+            print(f"new_gridsize  != g.grid_size: {new_gridsize} // {t.grid_size}")
+            t.grid_size = new_gridsize
+            return True
+
+        """if new_gridsize:
             if len(new_gridsize.strip()) > 2:
                 sg.popup("Please set a reasonable number of grid spaces.")
             try:
@@ -657,7 +654,7 @@ def main_window(start_hidden=True):
                 return "success"
 
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"Error: {e}")"""
 
 
     def set_rotations():
@@ -724,27 +721,6 @@ def main_window(start_hidden=True):
             return sg.Text(text=text, key=key, justification="center", text_color=colour, font=font)"""
         return sg.Text(text=text, key=key, size=size if size else (None, None), justification="center", text_color=colour, font=font, pad=padding if padding else 2)
 
-    def collapse_panel(key="", other_key=None, collapse=True, expand_y=False):
-        if collapse:
-            window[key].hide_row()
-            if expand_y:
-                window[key].expand(expand_y=False, expand_row=False)
-        else:
-            window[key].unhide_row()
-            if expand_y:
-                window[key].expand(expand_y=True, expand_row=True)
-
-        if other_key:
-            if collapse:
-                window[other_key].unhide_row()
-                if expand_y:
-                    window[key].expand(expand_y=True, expand_row=True)
-            else:
-                window[other_key].hide_row()
-                if expand_y:
-                    window[key].expand(expand_y=False, expand_row=False)
-
-
     def get_panel_dimensions():
         region_size = window["central"].get_size()
         g.central_region_size = region_size
@@ -760,7 +736,7 @@ def main_window(start_hidden=True):
         print(f"target image size (80% of grid region size): {g.target_image_size}")
         if not user_selected:
             g.puzzle_img_filename = selected_imgname.replace("_thumbnails", "").replace("_thumbnail", "_squared")
-        g.new_grid = True
+
         g.coord_to_img_files = {}
         g.coords_list = []
 
@@ -778,6 +754,7 @@ def main_window(start_hidden=True):
         window["grid"].update()
         window["grid_panel"].unhide_row()
         window["grid_panel"].expand(expand_y=True, expand_row=True)
+        update_clicks(reset="\nWaiting to scramble...\n")
         window["click_counter"].unhide_row()
         g.grid.CanvasSize = g.target_image_size # <-- this sets it back to being the right size. It shouldn't need it because it should be the right size already, but apparently not. Will look into it tomorrow.
         print(f"grid.canvassize: {g.grid.CanvasSize}")
@@ -785,9 +762,43 @@ def main_window(start_hidden=True):
         g.grid.BottomLeft = graph_bottom_left
         graph_top_right=(g.target_image_size[0], 0)
         g.grid.TopRight = graph_top_right
+        #print(f"g.bbox_dict from set_up_grid\n{g.bbox_dict}\n\n")
         g.bbox_dict = initial_grid_drawing()
+        #initial_grid_drawing()
+        #print(f"g.bbox_dict from initial_grid_drawing:\n{g.bbox_dict}\n\n")
         window["grid_panel"].update()
         window.refresh()
+
+    def move_to_gallery():
+        window["click_counter"].hide_row()
+        window["grid_panel"].hide_row()
+        window["gridsize_buttons"].update(visible=False)
+        window.refresh()
+        window["gallery"].unhide_row()
+
+
+        """ set the appropriate buttons, text output etc for the 'gallery' screen.\nAlso clear grid data + button associations."""
+        window["set_scramble"].update(disabled = True)
+        window["set_gallery"].update(disabled = True)
+        window["click_counter"].hide_row()
+        window["grid_panel"].hide_row()
+        window["gallery"].unhide_row()
+        window["gallery"].expand(expand_y=True, expand_row=True)
+        window["set_scramble"].update(disabled = True)
+        window.refresh()
+        g.start_screen=True
+        t.is_grid_screen = False
+
+
+    def move_to_grid(image_for_grid):
+        """ set the appropriate buttons, text output etc for the 'grid' screen."""
+        if t.is_grid_screen:
+            print("Moving to grid but are already at grid. If not a mistake, treat it as a restart.")
+        t.is_grid_screen = True
+        window["set_gallery"].update(disabled = False) # instead of adding this to each stage, have it track what screen it's on and transition appropriately.
+        generate_new_grid(image_for_grid)
+        window["set_scramble"].update(disabled=False, button_color=t.highlight_button_colour)
+
 
     def button_yielder():
 
@@ -813,7 +824,7 @@ def main_window(start_hidden=True):
     gallery_panel = button_yielder()
 
     text_layout = [
-            [setup_text(text=f"\nWaiting to scramble...\n", key="click_counter", size=(20,4))]
+            [setup_text(text="\nWaiting to scramble...\n", key="click_counter", size=(20,4))]
     ]
 
     grid_panel = [
@@ -845,10 +856,15 @@ def main_window(start_hidden=True):
         [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
     ]
 
+    gridsize_buttons = [
+        [setup_button(text=i, key=f"gridsize_{i}") for i in (3, 4, 5, 6, 7)]
+    ]
+
     adv_settings = [
         [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
         [sg.HorizontalSeparator()],
         [setup_button(text=f"Change grid size", key="adv_gridsize")],
+        [sg.Column(layout = gridsize_buttons, key="gridsize_buttons", visible=True)],
         [setup_button(text=f"Change number of rotations", key="adv_rotations")],
         [sg.HorizontalSeparator()],
         [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
@@ -912,7 +928,7 @@ def main_window(start_hidden=True):
 
     window = sg.Window(' •• SCRAMBLE •• ', layout, keep_on_top=False, finalize=True, margins=(3,3),
                        no_titlebar=False, resizable=True, size=(t.screen_x, t.screen_y), return_keyboard_events=True,
-                       enable_window_config_events=True, element_justification="center", alpha_channel=0 if start_hidden else 1)
+                       enable_window_config_events=True, element_justification="center", alpha_channel=0 if start_hidden else 1, transparent_color="#D0FF00")
 
     logger("main window init'd")
     last_held_xy = None
@@ -935,10 +951,12 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
         """
 
         if hide_grid:
-            window["click_counter"].hide_row()
+            move_to_gallery()
+            """window["click_counter"].hide_row()
             window["grid_panel"].hide_row()
+            window["gridsize_buttons"].update(visible=False)
             window.refresh()
-            window["gallery"].unhide_row()
+            window["gallery"].unhide_row()"""
             fade_in_out(fade_in=True)
             window.refresh()
             hide_grid = False
@@ -957,12 +975,10 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
 
         if event and event.startswith("imgkey_"):
             selected_imgname = event.replace("imgkey_", "")
-            window["set_gallery"].update(disabled = False) # instead of adding this to each stage, have it track what screen it's on and transition appropriately.
-
-            generate_new_grid(selected_imgname)
+            move_to_grid(selected_imgname)
 
         elif not start_screen_checked:
-            window["set_scramble"].update(disabled=False, button_color=t.highlight_button_colour)
+           # window["set_scramble"].update(disabled=False, button_color=t.highlight_button_colour)
             window.refresh()
             start_screen_checked=True
 
@@ -991,13 +1007,17 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
 
             elif event.startswith("adv_"):
                 if event == "adv_gridsize":
-                    if set_gridsize():
-                        if not g.start_screen:
-                            g.grid_region_size = g.grid_region_size
-                            generate_new_grid(g.puzzle_img_filename)
-                            window.close()
-                            g.start_screen=True
-                            return f"restart"
+                    if window["gridsize_buttons"].visible:
+                        window["gridsize_buttons"].update(visible=False)
+                    else:
+                        window["gridsize_buttons"].update(visible=True)
+
+            elif event.startswith("gridsize_"):
+                print(f"Event: gridsize_:  {event}")
+                if set_gridsize(event):
+                    if g.puzzle_img_filename and t.is_grid_screen:
+                        move_to_grid(g.puzzle_img_filename)
+                        #generate_new_grid(g.puzzle_img_filename)
 
                 if event == "adv_rotations":
                     if set_rotations():
@@ -1005,14 +1025,8 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
 
             elif event.startswith("set_"):
                 if event == "set_gallery":
-                    window["set_gallery"].update(disabled = True)
-                    window["click_counter"].hide_row()
-                    window["grid_panel"].hide_row()
+                    move_to_gallery()
 
-                    window["gallery"].unhide_row()
-                    window["gallery"].expand(expand_y=True, expand_row=True)
-                    window.refresh()
-                    g.start_screen=True
 
                 if event == "set_image":
                     window["set_gallery"].update(disabled = False)
@@ -1030,8 +1044,10 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
 
                 elif event == "set_difficulty":
                     set_difficulty()
+
                 elif event == "set_perfect":
                     set_solved()
+                    set_during_buttons_enable(enable=False, include_scramble=False)
 
             elif event == "get_hint":
                 show_incorrect()
@@ -1039,7 +1055,6 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
 
             elif event != "__TIMEOUT__":
                 if event == "__WINDOW CONFIG__":
-                    #print(f"original screen_x, original screen_y: {theme.screen_x}, {theme.screen_y}")
                     if window.size == t.maximised_size:
                         t.maximise_window = True
                     else:

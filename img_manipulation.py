@@ -131,6 +131,7 @@ def histograms(filename):
 def make_square(cell_w, colour, padding, transparent_centre=True):
     logger("make_square")
     output_name =  f"{colour}_square.png" if not transparent_centre else  f"{colour}_square_trans.png"
+
     outer_width = int(cell_w-(padding*2))
     #outer_height = cell_w-(padding*2)-4
     new_image = Image.new("RGBA", (outer_width-4, outer_width-4), colour) # is -4 here to compensate for the -2 of placement. But it shouldn't be an int like this, it should be defined by padding. Hm. #TODO
@@ -237,10 +238,10 @@ class image_manip_data: # at some point combine this with img_data but for now t
             im.show()
 """
 
-    def set_file_data(self, base_file, filename, region_size=None, padding=9, grid_size=4):
+    def set_file_data(self, base_file, output_filename, region_size=None, padding=9, grid_size=4):
         logger("set_file_data")
 
-        self.output_filename = filename
+        self.output_filename = output_filename
         if region_size:
             if region_size[0] < region_size[1]:
                 target_width = region_size[0]
@@ -250,7 +251,8 @@ class image_manip_data: # at some point combine this with img_data but for now t
             target_width = 400
 
         self.padding=padding
-
+        if not base_file:
+            print("NO BASE FILE FOUND FOR SET_FILE_DATA")
         with Image.open(base_file) as im:
             if im.height != int(target_width) or im.width != int(target_width):
             #im = im.resize(size=(int(target_width*.8), int(target_width*.8))) # 80% of the available height. currently assuming landscape, will adapt later.
@@ -264,7 +266,7 @@ class image_manip_data: # at some point combine this with img_data but for now t
                     print(f"Base image saved at: {self.output_filename}")
 
         self.region_height = target_width
-        self.img_width = new_im.size[0]
+        self.img_width = target_width#new_im.size[0]
         self.col_width = int(self.img_width / grid_size)
         self.row_width = int(self.img_width / grid_size)
         #self.spacing = int(self.img_width / grid_size)
@@ -338,6 +340,8 @@ class image_manip_data: # at some point combine this with img_data but for now t
             for column in range(0, cols):
                 box = ((column * col_width)+(padding/2), (row * row_height)+(padding/2), (column * col_width +
                     col_width)-(padding/2), (row * row_height + row_height)-(padding/2))
+                if row == 0  and column == 0:
+                    print(f"\n\nimage width: {self.img_width} // padding: {padding}// col_width: {col_width}\n\n0,0 img_manip bbox:\n{box}\n\n")
                 #outputs.append(im.crop(box))
                 tile = im.crop(box)
                 bbox_dict[row][column] = box
@@ -427,19 +431,18 @@ class image_manip_data: # at some point combine this with img_data but for now t
 
     #base_file = r"Screenshot 2026-04-18 233936_output.png"
 
-    def generate_img_grid(self, base_file, region_size=None, effects=False, padding=8, grid_size = 4, grid_data=None):
+    def generate_img_grid(self, base_file, region_size=None, effects=False, padding=8, grid_size = 4):
         logger(f"Generate image grid for {base_file}")
-        if grid_data:
-            print("\nimg_manip got grid_data data\n\n")
-            padding = grid_data.gap
-            grid_size = grid_data.grid_size
-            region_size = grid_data.width, grid_data.height # here, 'region' is actually the full size of the image.
+
         #input_filename = "image_name_for_testing.png" # r"Screenshot 2026-04-18 233936_output.png"
         print(f"base file: {base_file}")
-        temp_file_filename = f"{base_file.replace('.png', '').replace("gallery", "temp")}_temp.png"
+        if "_temp.png" in base_file:
+            temp_file_filename = base_file
+        else:
+            temp_file_filename = f"{base_file.replace('.png', '').replace("gallery", "temp")}_temp.png"
         temp_file_filename = temp_file_filename.replace("\\\\", "\\")
         print(f"\nABOUT TO GENERATE `{temp_file_filename}` from `{base_file}`\n")
-        raw_img_data.set_file_data(base_file = base_file, filename=temp_file_filename, region_size=region_size, padding=padding, grid_size=grid_size)
+        raw_img_data.set_file_data(base_file = base_file, output_filename=temp_file_filename, region_size=region_size, padding=padding, grid_size=grid_size)
         #input_filename = "manip_testing_2.png"
         if effects:
             raw_img_data.quantise_img(save_file = temp_file_filename, strength=1)

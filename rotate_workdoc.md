@@ -237,3 +237,129 @@ Also the gallery is now a grid formed from the contents of the gallery folder, v
 
 'start over' doesn't properly replace the wrong tiles with the proper ones, it just displays them. I thought I fixed that before but maybe I just got distracted.
 Custom images aren't saved to init like they're meant to be
+
+8.51pm 'start over' is fixed now, I hadn't updated current_image.
+
+9.28
+can now change the grid size live; if you have an existing image up, it resets the grid with that image and the new gridsize. If you don't have an image up, it uses that gridsize when you pick one. Only thing it doesn't do currently is update the JSON.
+
+12.32pm Huh. interesting issue.
+
+Clicking 0/1 (top middle on a 3/3 grid) gives this:
+g.clean_dict[coord]: {'children': {'top': (0, 0), 'right': (1, 1), 'bottom': (0, 2)}, 'target_image': 'row_0_col_1.png'}
+CHILDREN: {'top': (0, 0), 'right': (1, 1), 'bottom': (0, 2)}
+
+but it only rotates one square at a time:
+click 1 swaps top left and top right
+click 2 swaps top right and bottom
+click 3 swaps top left and bottom
+
+The right side does the same thing.
+But left and bottom both work properly.
+
+Huh. And that bug where it grabs old, differently-sized tiles. That one is probably because I didn't remove the buttons. data between grid changes yet but still. Not a fan.
+
+Oh - and 'start over' with the 'wrong sized tiles' error in place gave me this:
+
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "d:\Git_Repos\rotate_game\rotate_gui_01.py", line 486, in show_incorrect
+    button_box = g.bbox_dict[x][y]
+                 ~~~~~~~~~~~~~~^^^
+KeyError: 4
+(.venv) PS D:\Git_Repos\rotate_game>
+
+okay, so bbox is not being correctly reconstructed when the grid changes. Looks fine and plays fine, but bbox is broken. Might also be the reason for the wrong sized tile - if that part of the square clicked was part of another preexisting bbox, would make sense.
+
+Okay, so have tested: bbox exists on the default grid, but not after grid size changes.
+If you change the grid size in the gallery screen, then the grid is applied and it works fine. It's only when the grid is changed while the image is already shown. And this worked before. Or at least I think? Did I not test the autocomplete?
+
+A little more specific detail:
+I started with a 4/4 grid (0 - 3) and then changed to a 3/3 (0 - 2)
+
+And the key error specifically was
+
+    button_box = g.bbox_dict[x][y]
+                 ~~~~~~~~~~~^^^
+KeyError: 3
+
+So it's not that there's no bbox, but that it's trying to find an old key in bbox that simply doesn't exist anymore. So I need to look in a different spot.
+12.39pm 24/4/26
+Well that was easy. One line fix to clear b.by_coord at the start of initial_grid_drawing. I meant to clear the button data when I cleared the grid data but didn't, guess this is why I should.
+
+So. I make bbox_dict twice; once when generating the tile images, and again when initing the grid drawing. The first one is in this format:
+
+{0: {0: (4.0, 4.0, 154.0, 154.0), 1: (162.0, 4.0, 312.0, 154.0)
+
+and the second (from initial_grid_drawing) is like this:
+{0: {0: ((3.0, 3.0), (155.4, 155.4)), 1: ((161.4, 3.0), (313.8, 155.4)),
+
+And they all have similar discrepancies. I'm not sure why. Maybe just padding? Is the second excluding the area outside the buttons but the former is applying it? If you click the gap between buttons it just clicks whichever you were nearest to.
+
+Oh. So...
+
+    top_left = g.cell_w*column + (g.padding/2), g.cell_h*row + (g.padding/2)
+    bottom_right = g.cell_w*(column+1) - (g.padding/2), g.cell_h * (row+1) - (g.padding/2)
+    I add one to the bottom right coord here but the top left is neutral. ?
+
+I'm investigating this properly. The formatting difference makes sense , the original buttonbox was made for the topleft/bottom right format required for image generation, but the value discrepancies are interesting. Does explain that extremely small shift that happens the first time you click an image.
+
+some more data:
+image width: 792 // col_width: 158
+
+0,0 img_manip bbox:
+(4.0, 4.0, 154.0, 154.0)
+
+image width: 792 // col_width: 158.4
+0,0 gui bbox:
+((3.0, 3.0), (155.4, 155.4))
+
+Huh.
+Oh wait, of course. The '+ column' and the +1 are doing the same thing, they're both indicating the position of the next column wall. Okay, ignore that. The discrepancy is elsewhere.
+
+image width: 792 // padding: 8// col_width: 158
+
+0,0 img_manip bbox:
+(4.0, 4.0, 154.0, 154.0)
+
+image width: 792 // padding: 6 // col_width: 158.4
+0,0 gui bbox:
+((3.0, 3.0), (155.4, 155.4))
+
+okay so padding is 8 for image_manip but 6 for the gui.
+^ because I never sent g.padding, so it was just using the default 8 padding in img_manip.
+
+image width: 792 // padding: 6// col_width: 158
+
+0,0 img_manip bbox:
+(3.0, 3.0, 155.0, 155.0)
+
+So with that fixed:
+image width: 792 // padding: 6 // col_width: 158.4
+0,0 gui bbox:
+((3.0, 3.0), (155.4, 155.4))
+
+Huh. So col_width is determined...
+
+in img_manip:
+col_width = int(self.img_width / grid_size)
+
+in initial_grid_drawing, it's just g.cell_w and g.cell_h. Which are derived from...
+
+self.cell_h = self.img_width / self.cols
+Oh, it's just... not int'd. Okay.
+
+and trying again...
+
+0,0 gui bbox:
+image width: 792 // padding: 6 // col_width: 158
+((3.0, 3.0), (155.0, 155.0))
+vs
+0,0 img_manip bbox:
+image width: 792 // padding: 6// col_width: 158
+(3.0, 3.0, 155.0, 155.0)
+
+Okay. Good.
+Currently the main script is set up to use the latter format, but the grid requires it's made because it has to generate the tiles itself anyway.
+
+initial_grid_drawing does a full for loop of rows + tiles to generate its own dict...
+When all it needs to do is adapt to the existing bbox dict and make the relevant buttons. Okie. Can do that. 
