@@ -809,9 +809,10 @@ def main_window(start_hidden=True):
 
 
     def move_to_grid(image_for_grid=None):
+        """ set the appropriate buttons, text output etc for the 'grid' screen."""
         if not image_for_grid:
             image_for_grid = g.puzzle_img_filename
-        """ set the appropriate buttons, text output etc for the 'grid' screen."""
+
         if t.is_grid_screen:
             print("Moving to grid but are already at grid. If not a mistake, treat it as a restart.")
         t.is_grid_screen = True
@@ -890,19 +891,10 @@ def main_window(start_hidden=True):
             for key in window.AllKeysDict:
                 #print(f"KEY: {key}")
                 if isinstance(key, str) and key.startswith("imgkey_"):
-                    print(f"KEY: {key}")
-
                     thumb = window[key]
                     thumb:sg.Button
                     thumb.update(image_source=key.replace("imgkey_", ""), image_size=(g.thumbnail_width, g.thumbnail_width))
-                    print(f"window[thumb].get_size(): {window[key].get_size()}")
-                    #thumb.set_size = (g.thumbnail_width, g.thumbnail_width)
-                    #thumb.ImageData
-                    #thumb.ImageFilename = key
-                    #thumb.TKImage = key
                     thumb.update()
-                    print(f"window[thumb].get_size(): {thumb.get_size()}")
-
 
             window.refresh()
             #print(f"thumbnail width after : {g.thumbnail_width}")
@@ -913,13 +905,13 @@ def main_window(start_hidden=True):
         else:
             move_to_gallery()
 
-        window.refresh()
+        #window.refresh()
         #print(f'window["set_outergrid_w"].get_size(): {window["set_outergrid_w"].get_size()}')
         #window["set_outergrid_w"].set_size((t.screen_x*.2, 0))
         #window["set_outergrid_w"].update()
         #print(f'window["set_outergrid_w"].get_size() after: {window["set_outergrid_w"].get_size()}')
-        for panel in ("central", "grid_panel", "grid", "gallery"):
-            window[panel].expand(expand_x=False, expand_row=False)
+        #for panel in ("central", "grid_panel", "grid", "gallery"):
+            #window[panel].expand(expand_x=False, expand_row=False)
         #print(f"window['central'].get_size(): {window['central'].get_size()}")
         #print(f"window['grid_panel'].get_size(): {window['grid_panel'].get_size()}")
         #print(f"window['true_side'].get_size(): {window['true_side'].get_size()}")
@@ -927,7 +919,7 @@ def main_window(start_hidden=True):
         #print(f"window['true_side'].get_size(): {window['true_side'].get_size()}")
             #window.close()
             #break
-        window.refresh()
+        #window.refresh()
 
     grid = g.make_grid(simple=True)
 
@@ -938,9 +930,10 @@ def main_window(start_hidden=True):
     ]
 
     grid_panel = [
-            [sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour),
+            [#sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour),
                  grid,
-             sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+             #sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour)
+              ],
             [sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour),
                     sg.Frame(title="", layout=text_layout, element_justification="center"),
                     sg.Stretch(background_color=show_stretchers if debug_colours else t.background_colour)],
@@ -1030,8 +1023,10 @@ def main_window(start_hidden=True):
                                     sg.Column(layout=outer_grid, key="central",
                                                 background_color="maroon" if debug_colours else t.background_colour, pad=(5,5),
                                                 element_justification='center', vertical_alignment='center', expand_x=True, expand_y=True),
-                                    sg.Column(layout=outer_side, expand_y=True, background_color="yellow" if debug_colours else t.background_colour, key="true_side", justification="right")
-                                    ]],
+                                    sg.pin(sg.Column(layout=outer_side, expand_y=True, background_color="yellow" if debug_colours else t.background_colour, key="true_side", justification="right", vertical_alignment="c")
+                                    )]],
+                                    #sg.Column(layout=outer_side, expand_y=True, background_color="yellow" if debug_colours else t.background_colour, key="true_side", justification="right", vertical_alignment="c")
+                                    #]],
                             font=("courier", 10, "bold"), relief="groove", pad=(5), border_width=5, expand_x=True, expand_y=True,
                             background_color="green" if debug_colours else t.background_colour, element_justification="right")]
                         ]
@@ -1043,7 +1038,6 @@ def main_window(start_hidden=True):
     logger("main window init'd")
     last_held_xy = None
     if t.maximise_window:
-        #window.Maximize()
         window.maximize()
         t.maximised_size = tuple(window.size)
 
@@ -1073,22 +1067,38 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
             hide_grid = False
 
         if g.start_screen and not size_got:
-            t.main_window = window["main_window"]
-            t.central = window["central"]
-        # panels in central: #
-            t.gallery = window["gallery"]
-            t.grid_panel = window["grid_panel"]
-            t.grid_box = window["grid"]
-
-            # panels in side: #
-            t.true_side = window["true_side"]
-            t.central.expand(expand_row=True, expand_x=True)
-           # t.gallery.expand(expand_row=True)
-
-            print(f"g.grid_panel_size: {window['grid_panel'].get_size()}")
             panel_size = window['grid_panel'].get_size()
-            g.true_side = window["true_side"].get_size()
             if panel_size[0] != 1:
+                t.main_window = window["main_window"]
+                t.central = window["central"]
+                t.true_side = window["true_side"]
+                #t.central.expand(expand_row=True, expand_x=True)
+                #t.central.size=((t.main_window.get_size()[0]*.66), t.main_window.get_size()[1]*.99)
+                #t.true_side.set_size(size=(t.main_window.get_size()[0] - t.central.get_size()[0], t.main_window.get_size()[1]*.99))
+                print(f"t.true_side size before set_size: {t.true_side.get_size()}")
+                t.true_side.set_size(size=(t.main_window.get_size()[0] - t.central.get_size()[0], t.main_window.get_size()[1]*.99))
+                t.true_side.expand(expand_row=True, expand_y=True)
+                t.true_side.Position
+
+
+#         t.true_side size: (604, 982)
+#         t.central size: (1090, 978)
+#         t.main_window size: (1904, 1011)
+#         captured grid_panel size: (1080, 859)
+                print(f"t.true_side size: {t.true_side.get_size()}")
+
+                print(f"t.central size: {t.central.get_size()}")
+                print(f"t.main_window size: {t.main_window.get_size()}")
+            # panels in central: #
+                t.gallery = window["gallery"]
+                t.grid_panel = window["grid_panel"]
+                t.grid_box = window["grid"]
+
+                # panels in side: #
+            # t.gallery.expand(expand_row=True)
+
+                #print(f"g.grid_panel_size: {window['grid_panel'].get_size()}")
+                g.true_side = window["true_side"].get_size()
                 g.grid_panel_size = panel_size
                 print(f"captured grid_panel size: {g.grid_panel_size}")
                 size_got=True

@@ -392,3 +392,8 @@ worked on the resizing for a bit, but the lag as it remakes all the thumbnails i
 Still haven't gotten the layout perfect. Removed the 'stick' holding "central" open and it broke as expected. Need to do it better.
 
 For now I've locked into fullscreen mode. Will play around with it more later.
+
+hm. 'return to gallery' if you left fullscreen in grid screen increases the window size. I guess I need to set the thumbnail size as a ratio of the max screen size from the beginning. Hm.
+
+7.08pm
+finally figured it out. Now the right hand panel is entirely stationary and isn't redrawn/moved when switching from gallery/grid modes.
