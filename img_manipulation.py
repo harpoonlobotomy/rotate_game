@@ -132,9 +132,12 @@ def make_square(cell_w, colour, padding, transparent_centre=True):
     logger("make_square")
     output_name =  f"{colour}_square.png" if not transparent_centre else  f"{colour}_square_trans.png"
 
+    #outer_width = int(cell_w-(padding*2))
     outer_width = int(cell_w-(padding*2))
     #outer_height = cell_w-(padding*2)-4
-    new_image = Image.new("RGBA", (outer_width-4, outer_width-4), colour) # is -4 here to compensate for the -2 of placement. But it shouldn't be an int like this, it should be defined by padding. Hm. #TODO
+    #new_image = Image.new("RGBA", (outer_width-4, outer_width-4), colour) # is -4 here to compensate for the -2 of placement. But it shouldn't be an int like this, it should be defined by padding. Hm. #TODO
+    new_image = Image.new("RGBA", (outer_width, outer_width), colour) # is -4 here to compensate for the -2 of placement. But it shouldn't be an int like this, it should be defined by padding. Hm. #TODO
+    square_width = outer_width-4
 
     if transparent_centre:
         inner_square_width = int((cell_w*.66))
@@ -154,7 +157,7 @@ def make_square(cell_w, colour, padding, transparent_centre=True):
         new_image.paste(inner_square, box=(gap, gap, inner_square_width + gap, inner_square_width + gap))
 
     new_image.save(output_name, "PNG")
-    return output_name
+    return output_name, square_width
 
 class image_manip_data: # at some point combine this with img_data but for now they're separate because I'm tired
 
