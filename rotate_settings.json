@@ -1,1 +1,8 @@
-{"grid_size": 5, "difficulty": 1, "background_colour": "#00345B", "fullscreen": true, "screen_size": "(1920, 1057)"}
+{
+  "grid_size": 5,
+  "background_colour": "#00345B",
+  "fullscreen": false,
+  "maximised_size": "(1920, 1027)",
+  "main_window_size": "(1524, 895)",
+  "thumbnail_size": 151
+}

@@ -22,11 +22,24 @@ class theme_data():
         with open(settings, "r") as settings:
             settings_data = json.load(settings)
 
+        self.settings_data = settings_data
         self.grid_size = settings_data["grid_size"]
-        self.difficulty = settings_data["difficulty"]
         self.background_colour = settings_data["background_colour"]
-        self.default_screen_size = settings_data["screen_size"]
-        self.is_fullscreen = settings_data["fullscreen"]
+        #self.startup_screen_size = settings_data["screen_size"]
+        self.maximised_size = settings_data["maximised_size"]
+        self.window_size = settings_data["main_window_size"]
+        if isinstance(self.maximised_size, str):
+            self.maximised_size = eval(self.maximised_size)
+        self.thumbnail_size = settings_data["thumbnail_size"]
+
+        if isinstance(self.window_size, str):
+            self.window_size = eval(self.window_size)
+
+        print(f"theme.window_size: {self.window_size}, type: {type(self.window_size)}")
+        self.screen_x = self.window_size[0]#480
+        self.screen_y = self.window_size[1]
+
+        self.start_maximised = settings_data["fullscreen"]
         self.is_grid_screen = False #marker for which panels are in view.
 
         self.enable_resize = True#False # to determine whether to rescale thumbnails/tiles etc.
@@ -68,9 +81,6 @@ class theme_data():
     theme_name = "arcade"
     sg.theme(theme_name)
 
-    screen_x = 480
-    screen_y = 640
-    maximise_window=True
     maximised_size:tuple = (0,0)
     game_started = False
         #sg.theme('farkle_tan')
@@ -91,6 +101,20 @@ class theme_data():
     highlight_button_colour = "#5E9980"
     button_colour = "#589CB8"
     start_screen:bool = True # is what shows the 'gallery' and lets me get the region dimensions.
+
+    def save_settings(self):
+        # TODO: If settings json not found, generate on first startup with default vals.
+        self.settings_data["grid_size"] = self.grid_size
+        self.settings_data["background_colour"] = self.background_colour
+        #self.settings_data["screen_size"] = ##   "screen_size": "(1920, 1080)",
+        self.settings_data["fullscreen"] = self.start_maximised
+        self.settings_data["maximised_size"] = str(self.maximised_size)
+        self.settings_data["main_window_size"] = str(t.window_size)
+        self.settings_data["thumbnail_size"] = self.thumbnail_size
+        import json
+        settings = "rotate_settings.json"
+        with open(settings, "w") as settings:
+            json.dump(self.settings_data, settings, indent=2)
 
 t = theme_data()
 
@@ -166,23 +190,23 @@ class buttonClass:
 
 b = buttonClass()
 
-def splash_window():
+"""def splash_window():
     logger("splash window")
-    """Using the splash screen to get the size of the maximised window"""
+    #Using the splash screen to get the size of the maximised window
 
     splashscreen_window = sg.Window(' •• SCRAMBLE ••', layout=[[sg.Canvas(size=(1,1))]], keep_on_top=True, finalize=True, margins=(10,10), no_titlebar=True, alpha_channel=0)
 
     splashscreen_window.maximize()
 
-    while True:
-        event, _ = splashscreen_window.read(timeout=100)
-        #print(f"splashscreen_window.Size: {splashscreen_window.Size}")
-        if splashscreen_window.get_screen_dimensions() and splashscreen_window.get_screen_dimensions() != (None, None):   #fullscreen version"""
-            t.screen_x, t.screen_y = splashscreen_window.get_screen_dimensions()
-            splashscreen_window.close()
+    #while True:
+    #    event, _ = splashscreen_window.read(timeout=100)
+    #    #print(f"splashscreen_window.Size: {splashscreen_window.Size}")
+    #    if splashscreen_window.get_screen_dimensions() and splashscreen_window.get_screen_dimensions() != (None, None):   #fullscreen version
+    #        #t.screen_x, t.screen_y = splashscreen_window.get_screen_dimensions()
+    #        splashscreen_window.close()
 
         if splashscreen_window.is_closed():
-            break
+            break"""
 
 class gridClass:
 
@@ -199,7 +223,7 @@ class gridClass:
         self.cols:int = t.grid_size
         self.padding = 8
 
-        self.thumbnail_width = 200
+        self.thumbnail_width = t.thumbnail_size
         self.img_width = t.screen_y/2 if t.screen_x > t.screen_y else t.screen_x/2
         self.cell_w = int(self.img_width / self.rows)
         self.cell_h = int(self.img_width / self.cols)
@@ -351,6 +375,15 @@ def main_window(start_hidden=True):
     sg.theme(t.theme_name)
     if g.start_screen:
         g.clear_grid_data()#b.clear_buttondata()
+
+    def update_window_size_data():
+        t.thumbnail_size = g.thumbnail_width
+        t.window_size = window.size
+        if window.size == t.maximised_size:
+            t.start_maximised = True
+        else:
+            t.start_maximised = False
+        t.save_settings()
 
     def make_gallery_list(image=None, make_squares = True, force_thumbnails = False):
 
@@ -616,7 +649,8 @@ def main_window(start_hidden=True):
         if not key:
             if text:
                 key = f"{text}_key"
-
+        if not size:
+            size = (len(text) + 2, 1)
         return sg.Button(button_text=text, size=size, key=key, use_ttk_buttons=True, auto_size_button=True, font=font, disabled_button_color="gray", disabled=start_disabled, button_color=colour, tooltip=tooltip, pad=padding if padding else (5,4))
 
 
@@ -702,12 +736,12 @@ def main_window(start_hidden=True):
     def button_yielder():
 
         MAX_COL = 5
-        MAX_ROWS = int(len(g.gallery_list) / MAX_COL)
         button_layout =  [
-                        [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+                        #[sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
                         [(setup_text("\n - choose an image - \n", padding=20))]
                         ]
-        for j in range(1, MAX_COL+1):
+
+        for j in range(0, MAX_COL+1):
             button_layout.append(
                         [sg.Button(button_text="", image_source=g.gallery_list[i + (j * MAX_COL)], file_types=(("ALL files", ".*"),),
                                 key=f"imgkey_{g.gallery_list[i + (j * MAX_COL)]}", image_size=(g.thumbnail_width,g.thumbnail_width), pad=5)
@@ -732,7 +766,7 @@ def main_window(start_hidden=True):
                     window[key].update(button_color = t.button_colour)
 
 
-    def update_window_size(do_maximise=False):
+    def update_window_size(do_maximise=False, move_on=False):
         if not t.enable_resize:
             return
         new_screen_x, new_screen_y = window.size
@@ -742,7 +776,7 @@ def main_window(start_hidden=True):
 
         max_x = max(new_screen_x - t.screen_x, t.screen_x - new_screen_x)
         max_y = max(new_screen_y - t.screen_y, t.screen_y - new_screen_y)
-        print(f"max_x: {max_x} // max_y: {max_y}")
+        #print(f"max_x: {max_x} // max_y: {max_y}")
         #if max_x > (t.screen_x/10) and max_y > (t.screen_y/10):
         if ((max_x and max_x < 100) and (max_y and max_y < 100)) or (not max_x and not max_y):
             print("diff is less than 100, ignoring.")
@@ -752,17 +786,21 @@ def main_window(start_hidden=True):
         ratio = new_screen_y / t.maximised_size[1]
         #print(f"ratio (new_screen_y / t.maximised_size[1]: {ratio}")
         if ratio > 1 and not do_maximise:
-            print("Ratio is larger than max size, ignoring.")
+            print(f"Ratio is larger than max size. t.maximised_size: {t.maximised_size}, new screen: {window.size}, ignoring.")
             return
 
-        new_thumbnail_width = int(g.thumbnail_width * ratio)
-        if (new_thumbnail_width / g.thumbnail_width > .9 and not do_maximise):
+        new_thumbnail_width = int((new_screen_x*.66)/6)
+        #print(f"new thumbnail width: {new_thumbnail_width}")
+        if new_thumbnail_width > 200:
+            new_thumbnail_width = 200
+
+        elif 200 - new_thumbnail_width < 20:
             return
 
         if do_maximise:
             if g.thumbnail_width == 200:
                 print("apparently g.thumbnail_width is already 200.")
-                #return
+                return
             g.thumbnail_width = 200 # default thumbnail size, can keep it safe somewhere later
 
         t.screen_x = new_screen_x
@@ -770,8 +808,7 @@ def main_window(start_hidden=True):
 
         if not t.is_grid_screen:
             g.thumbnail_width = int(g.thumbnail_width * ratio)
-            make_gallery_list(force_thumbnails=True) # does recreate the thumbnails to a different size now. Means I have to regenerate them on startup though otherwise they stay small.
-            #print(f"thumbnail width before: {g.thumbnail_width}")
+            make_gallery_list(force_thumbnails=True) # without this, 'image_size' just uses a smaller portion of the existing image
 
             #print("window.AllKeysDict:\n\n", window.AllKeysDict, "\n\n")
             for key in window.AllKeysDict:
@@ -782,13 +819,15 @@ def main_window(start_hidden=True):
                     thumb.update(image_source=key.replace("imgkey_", ""), image_size=(g.thumbnail_width, g.thumbnail_width))
                     thumb.update()
 
-            window.refresh()
-
         window.refresh()
-        if t.is_grid_screen:
-            move_to_grid()
-        else:
-            move_to_gallery()
+        update_window_size_data()
+        t.save_settings()
+        if move_on:
+            if t.is_grid_screen:
+                move_to_grid()
+            else:
+                move_to_gallery()
+
 
     grid = g.make_grid(simple=True)
 
@@ -804,7 +843,6 @@ def main_window(start_hidden=True):
 
 
 #### Side panel ###
-    difficulty_text = "Easy: 4x4 grid\nStandard: 6x6 grid\nHard: 9x9 grid."
 
     all_settings = [
         [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
@@ -813,7 +851,6 @@ def main_window(start_hidden=True):
         [sg.HorizontalSeparator(p=h_sep_padding)],
         [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
         [setup_button(text=f"Custom image", key="set_image")],
-        [setup_button(text=f"Difficulty:\n{t.difficulty_legend[t.difficulty]}", key="set_difficulty", tooltip = difficulty_text)],
         [setup_button(text="Show incorrect", key="get_hint", start_disabled=True)],
         [setup_button(text="Start over", key="set_perfect", start_disabled=True)],
         [setup_button(text=f"Return to Gallery", key="set_gallery", start_disabled=True)],
@@ -845,8 +882,11 @@ def main_window(start_hidden=True):
                   ]
 
     side_panel = [
-                    [sg.Frame(title="", layout=[[sg.Frame(title="", layout=main_settings, relief="ridge", border_width=7, pad=50)]], relief="groove", border_width=5, pad=40)],
-                    [sg.Frame(title="", layout=[[sg.Frame(title="", layout=advanced_settings, relief="ridge", border_width=7, pad=20)]], relief="groove", border_width=5, pad=40)]
+                    [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+                    [sg.Frame(title="", layout=[[sg.Frame(title="", layout=main_settings, relief="ridge", border_width=7, pad=50)]], relief="groove", border_width=5, pad=((10, 20), 5))],
+                    [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
+                    [sg.Frame(title="", layout=[[sg.Frame(title="", layout=advanced_settings, relief="ridge", border_width=7, pad=20)]], relief="groove", border_width=5, pad=((10, 20), 5))],
+                    [sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)]
                 ]
 
     pillar_middle = [[
@@ -859,13 +899,14 @@ def main_window(start_hidden=True):
                     sg.Canvas(size=(5, None), expand_y=True, background_color="#0E1B25", pad=(1,3))
                     ]]
     pillar = [
-        [sg.Frame(title="", layout=[[sg.Canvas()]], element_justification="center", size=(90,25), pad=((0,0), (10,0)), relief="raised", border_width=2)],
+        [sg.Frame(title="", layout=[[sg.Canvas()]], element_justification="center", size=(90,25), pad=((0,0), (5,0)), relief="raised", border_width=2)],
         [sg.Frame(title="", layout=[[sg.Column(layout = pillar_middle, background_color="#00345B", expand_y=True, vertical_alignment="center")]], relief="sunken", pad=(10, 0), background_color="gray", expand_y=True, border_width=2)],
-        [sg.Frame(title="", layout=[[sg.Canvas()]], element_justification="center", size=(90,25), pad=((0,0), (0,10)), relief="raised", border_width=2)]
+        [sg.Frame(title="", layout=[[sg.Canvas()]], element_justification="center", size=(90,25), pad=((0,0), (0,5)), relief="raised", border_width=2)]
     ]
 
     outer_side = [
-        [sg.Column(layout=pillar, expand_y=True, background_color="orange" if debug_colours else t.background_colour, element_justification="center", pad=((20,20),(0,0))),
+        [sg.Canvas(size=(1,1), background_color = "orange" if debug_colours else  t.background_colour, key="spacer_settings"),
+        sg.Column(layout=pillar, expand_y=True, background_color="orange" if debug_colours else t.background_colour, element_justification="center", pad=((10,10),(0,0))),
         sg.Column(side_panel, key="side", element_justification="center", vertical_alignment="center",
                         background_color="dark blue" if debug_colours else t.background_colour, pad=0, expand_x=False, expand_y=True)]
     ]
@@ -892,16 +933,20 @@ def main_window(start_hidden=True):
                        no_titlebar=not t.enable_resize, resizable=t.enable_resize, return_keyboard_events=True,
                        enable_window_config_events=True, element_justification="center", alpha_channel=0 if start_hidden else .8, transparent_color="#D0FF00")
 
+
     logger("main window init'd")
     last_held_xy = None
-    if t.maximise_window:
+    if t.start_maximised:
         window.maximize()
+        window.refresh()
         t.maximised_size = tuple(window.size)
+    else:
+        window.set_size(size=(t.screen_x, t.screen_y))
 
-    start_screen_checked = False
     t.game_started = False
     size_got = False
     hide_grid = False
+    settings_saved = False
     while True:
         event, values = window.read(timeout=500)
 
@@ -920,19 +965,19 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
             hide_grid = False
 
         if g.start_screen and not size_got:
+            size_got=True
+            g.start_screen = False
+
             panel_size = window['grid_panel'].get_size()
             if panel_size[0] != 1:
                 t.main_window = window["main_window"]
                 t.central = window["central"]
                 t.true_side = window["true_side"]
-                #print(f"t.true_side size before set_size: {t.true_side.get_size()}")
-                t.true_side.set_size(size=(t.main_window.get_size()[0] - t.central.get_size()[0], t.main_window.get_size()[1]*.99))
-                t.true_side.expand(expand_row=True, expand_y=True)
-                t.true_side.Position
-
-                #print(f"t.true_side size: {t.true_side.get_size()}")
-                #print(f"t.central size: {t.central.get_size()}")
-                #print(f"t.main_window size: {t.main_window.get_size()}")
+                window["spacer_settings"].set_size((1, window.size[0]-5)) #< - forces the settings panel to be full height
+                window.refresh()
+                t.true_side.expand(expand_row=True, expand_y=True, expand_x=False)
+                window.refresh()
+                #t.true_side.set_size(size=(t.main_window.get_size()[0] - t.central.get_size()[0], t.main_window.get_size()[1]*.99)) < - does lit nothing
             # panels in central: #
                 t.gallery = window["gallery"]
                 t.grid_panel = window["grid_panel"]
@@ -952,6 +997,8 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
 
         if event:
             if "Escape" in event or event == "exit":
+                update_window_size_data()
+                settings_saved = True
                 fade_in_out(fade_in=False)
                 window.close()
                 return "Done"
@@ -1011,9 +1058,6 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                     if not t.game_started:
                         set_during_buttons_enable(enable=True)
 
-                elif event == "set_difficulty":
-                    set_difficulty()
-
                 elif event == "set_perfect":
                     set_solved()
                     set_during_buttons_enable(enable=False, include_scramble=False)
@@ -1021,20 +1065,29 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
             elif event == "get_hint":
                 show_incorrect()
 
-            elif event == "__WINDOW CONFIG__":
+            elif event == "__WINDOW CONFIG__" and size_got and window.size != t.window_size:
                 if not t.enable_resize:
                     if not window.maximized or window.size != t.maximised_size:
                         window.maximize()
+                        t.window_size = window.size
+                        update_window_size_data()
                 else:
                     if window.size == t.maximised_size:
-                        if not t.maximise_window:
-                            update_window_size(do_maximise=True)
-                        t.maximise_window = True
+                        t.start_maximised = True
+                        t.window_size = window.size
+                        update_window_size(do_maximise=True)
+                        update_window_size_data()
+                        settings_saved = True
                     else:
-                        t.maximise_window = False
+                        t.start_maximised = False
+                        t.window_size = window.size
                         update_window_size()
+                        update_window_size_data()
+                        settings_saved = True
 
         if window.is_closed():
+            if not settings_saved:
+                t.save_settings()
             return "Done"
 
 def main():
@@ -1044,11 +1097,11 @@ def main():
     while True:
         start_hidden=True
         while True:
-            if not skip_splash:
-                splash_window()
+            #if not skip_splash:
+                #splash_window()
             outcome = main_window(start_hidden=start_hidden)
             start_hidden=False
-            skip_splash=True
+            #skip_splash=True
             if outcome:
                 break
         if outcome and outcome == "Done":

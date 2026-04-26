@@ -528,8 +528,15 @@ def make_square_png(add_image = None, make_squares=True, make_thumbnails=True, t
     thumb_list = [fr"{thumb_dir}{f}" for f in os.listdir(thumb_dir) if ".png" in f.lower()]
     squared_list = [fr"{squared_dir}{f}" for f in os.listdir(squared_dir) if ".png" in f.lower()]
     if (init_name_list and thumb_list and squared_list) and len(init_name_list) == len(thumb_list) == len(squared_list) and not force_thumbnails:
-        print("Same count of initial images, thumbs and squared. Not generating new.")
-        return squared_dir, thumb_dir, thumb_list
+        for i in init_name_list:
+            path = fr"{thumb_dir}{i.replace(".png", "")[:10]}_thumbnail.png"
+            with Image.open(path) as im:
+                if im.width == thumbnail_size:
+                    print("Same count of initial images, thumbs and squared. Not generating new.")
+                    return squared_dir, thumb_dir, thumb_list
+                else:
+                    force_thumbnails = True
+
 
     for i in init_name_list:
         if make_thumbnails and not make_squares and not force_make:
@@ -539,7 +546,7 @@ def make_square_png(add_image = None, make_squares=True, make_thumbnails=True, t
 
         if not make_thumbnails and not force_make and "_squared" in i:
             if os.path.isfile(f"{squared_dir}{i}") and not force_make and not force_thumbnails:
-                print(f"{path} // `{squared_dir}{i}` already exists, skipping.")
+                #print(f"{path} // `{squared_dir}{i}` already exists, skipping.")
                 continue
 
         if force_thumbnails: # only works for later operations when we know _squared exists.
@@ -571,17 +578,17 @@ def make_square_png(add_image = None, make_squares=True, make_thumbnails=True, t
             for filename in (thumb_filepath, square_filepath):
                 skip = False
                 if os.path.isfile(filename) and not force_make and ((force_thumbnails and filename != thumb_filepath) or not force_thumbnails):
-                    print(f"{filename} already exists, skipping.")
+                    #print(f"{filename} already exists, skipping.")
                     skip=True
 
             if skip and not force_thumbnails:
                 continue
 
-            print(f"FILENAME FOR {i}: {filename}")
+            #print(f"FILENAME FOR {i}: {filename}")
             #print(f"Filename: {filename}")
             starting_size = im.size
             #im.show()
-            print(f"Starting size for {i}: {starting_size}")
+            #print(f"Starting size for {i}: {starting_size}")
             x, y = starting_size
             if x != y:
 
@@ -592,18 +599,18 @@ def make_square_png(add_image = None, make_squares=True, make_thumbnails=True, t
                     new_x = y
                     new_y = y
 
-                print(f"new_x: {new_x}")
-                print(f"new_y: {new_y}")
+                #print(f"new_x: {new_x}")
+                #print(f"new_y: {new_y}")
                 x_diff = x - new_x
                 y_diff = y - new_y
                 x_diff = abs(x_diff)
                 y_diff = abs(y_diff)
-                print(f"x_diff: {x_diff} / y_diff: {y_diff}")
+                #print(f"x_diff: {x_diff} / y_diff: {y_diff}")
 
                 x_gap = x_diff / 2
                 y_gap = y_diff / 2
 
-                print(f"x_gap = {x_gap} / y_gap: {y_gap}")
+                #print(f"x_gap = {x_gap} / y_gap: {y_gap}")
                 """
     left: The x-coordinate of the leftmost edge.
     upper: The y-coordinate of the top edge.
@@ -660,7 +667,7 @@ def make_square_png(add_image = None, make_squares=True, make_thumbnails=True, t
                 new_image.save(square_filepath, "PNG")
 
             if make_thumbnails:
-                print(f"ABOUT TO SAVE THUMBNAIL: {thumb_filepath}")
+                #print(f"ABOUT TO SAVE THUMBNAIL: {thumb_filepath}")
                 new_image = new_image.resize(size=(thumbnail_size, thumbnail_size))
                 new_image.save(thumb_filepath, "PNG")
 
