@@ -4,3 +4,4 @@ gallery_thumbnails/*
 gallery/*
 tiles/*
 temp/*
+__pycache__/*

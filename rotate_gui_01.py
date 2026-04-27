@@ -1,5 +1,5 @@
 from time import sleep
-
+import math
 import FreeSimpleGUI as sg
 
 def logger(string):
@@ -23,14 +23,22 @@ class theme_data():
             settings_data = json.load(settings)
 
         self.settings_data = settings_data
+        self.allow_resize = settings_data["allow_resize"]
         self.grid_size = settings_data["grid_size"]
         self.background_colour = settings_data["background_colour"]
-        #self.startup_screen_size = settings_data["screen_size"]
         self.maximised_size = settings_data["maximised_size"]
-        self.window_size = settings_data["main_window_size"]
         if isinstance(self.maximised_size, str):
             self.maximised_size = eval(self.maximised_size)
-        self.thumbnail_size = settings_data["thumbnail_size"]
+        if self.allow_resize:
+            self.window_size = settings_data["main_window_size"]
+            self.start_maximised = settings_data["fullscreen"]
+            self.thumbnail_size = settings_data["thumbnail_size"]
+        else:
+            self.window_size = (1360, 850)#self.maximised_size
+            self.start_maximised = True
+            self.thumbnail_size = 200
+
+        self.gallery_region_size = settings_data["gallery_region_size"]
 
         if isinstance(self.window_size, str):
             self.window_size = eval(self.window_size)
@@ -39,10 +47,10 @@ class theme_data():
         self.screen_x = self.window_size[0]#480
         self.screen_y = self.window_size[1]
 
-        self.start_maximised = settings_data["fullscreen"]
+        self.gallery_columns = 5
+
         self.is_grid_screen = False #marker for which panels are in view.
 
-        self.enable_resize = True#False # to determine whether to rescale thumbnails/tiles etc.
 
       ### panel areas for fn hinting ###
         # main window
@@ -56,6 +64,7 @@ class theme_data():
         # panels in side: #
         self.true_side:sg.Column = None
 
+        self.settings_panel_width_bar:tuple = (271,1)
 
     theme_dict:dict = {
         "arcade": {'BACKGROUND': "#38354a",#31374e",
@@ -111,6 +120,7 @@ class theme_data():
         self.settings_data["maximised_size"] = str(self.maximised_size)
         self.settings_data["main_window_size"] = str(t.window_size)
         self.settings_data["thumbnail_size"] = self.thumbnail_size
+        self.settings_data["gallery_region_size"] = str(self.gallery_region_size)
         import json
         settings = "rotate_settings.json"
         with open(settings, "w") as settings:
@@ -227,12 +237,10 @@ class gridClass:
         self.img_width = t.screen_y/2 if t.screen_x > t.screen_y else t.screen_x/2
         self.cell_w = int(self.img_width / self.rows)
         self.cell_h = int(self.img_width / self.cols)
-        self.target_image_size = 500 # derived from element size, not img pixels.
+        self.target_image_size = (500, 500) # derived from element size, not img pixels.
 
         self.gallery_panel = None # just testing
         self.grid_region_size:tuple[int, int]  = (50,50) # <- just the grid area itself (img sized)
-        self.grid_panel_size:tuple[int, int] = (125, 125) # the magenta around the grid
-        self.central_region_size:tuple[int, int] = (150,150) # <- entire maroon area
         self.start_screen = True # whether to open window to the gallery or not
         self.rotations_count = None
 
@@ -243,11 +251,9 @@ class gridClass:
         self.ordered_children = self.clean_dict = self.bbox_dict = self.coord_to_img_files = self.unordered_child_dict = {}
         self.puzzle_img_filename:str = None
         self.grid:sg.Graph = None
-        self.target_image_size:int = 500
+        self.target_image_size:int = (500, 500)
         self.grid_region_size:tuple[int, int]  = (50,50)
         self.grid_panel_size:tuple[int, int] = (125, 125)
-        self.true_side:tuple[int, int] = (125, 150)
-        self.central_region_size:tuple[int, int] = (150,150)
         b.clear_buttondata()
 
     def make_grid(self, simple=True):
@@ -259,7 +265,7 @@ class gridClass:
             else:
                 width = t.screen_x*.66
         else:
-            width = g.target_image_size
+            width = g.target_image_size[0]
 
         self.grid = sg.Graph(
             canvas_size=(width, width),
@@ -377,8 +383,10 @@ def main_window(start_hidden=True):
         g.clear_grid_data()#b.clear_buttondata()
 
     def update_window_size_data():
+        window.refresh()
         t.thumbnail_size = g.thumbnail_width
         t.window_size = window.size
+        t.gallery_region_size = window["gallery"].get_size()
         if window.size == t.maximised_size:
             t.start_maximised = True
         else:
@@ -390,9 +398,10 @@ def main_window(start_hidden=True):
         force_make = False
         print("Making thumbnails.")
         from img_manipulation import make_square_png
-        squared_dir, thumbs_dir, thumb_list = make_square_png(add_image=image, make_squares=make_squares, make_thumbnails=True, thumbnail_size = g.thumbnail_width, force_make=force_make, force_thumbnails = force_thumbnails)
+        squared_dir, thumbs_dir, thumb_list = make_square_png(add_image=image, make_squares=make_squares, make_thumbnails=True, thumbnail_size = int(g.thumbnail_width), force_make=force_make, force_thumbnails = force_thumbnails)
 
         g.gallery_list = thumb_list
+        print("thumbnails made")
 
     h_sep_padding = (20,10)
 
@@ -565,10 +574,7 @@ def main_window(start_hidden=True):
         for row, column in g.bbox_dict.items():
             for tile in column:
                 make_button((row, tile))
-                #if row == 0 and tile == 0:
-                    #print(f"g.bbox_dict[row][tile][0], g.bbox_dict[row][tile][1]:\n{g.bbox_dict[row][tile][0], g.bbox_dict[row][tile][1]}\n\n")
                 unpressed_button(g.bbox_dict[row][tile][0], g.bbox_dict[row][tile][1])#top_left, bottom_right)
-
         return
 
 
@@ -610,7 +616,7 @@ def main_window(start_hidden=True):
 
 
     def set_gridsize(new_gridsize):
-        #new_gridsize = sg.popup_get_text(message=f"Current gridsize is {g.grid_size}. Please enter a new gridsize.", title="Enter a new grid size value")
+
         new_gridsize = int(new_gridsize.replace("gridsize_", ""))
         if new_gridsize != t.grid_size:
             t.grid_size = new_gridsize
@@ -662,11 +668,12 @@ def main_window(start_hidden=True):
         return sg.Text(text=text, key=key, size=size if size else (None, None), justification="center", text_color=colour, font=font, pad=padding if padding else 2)
 
     def get_panel_dimensions():
-        region_size = window["central"].get_size()
-        g.central_region_size = region_size
+        window.refresh()
+        t.central = window["central"].get_size()
+
         g.grid_panel_size = window['grid_panel'].get_size()
         g.grid_panel_size = (g.grid_panel_size[1], g.grid_panel_size[1])
-        g.target_image_size = (int(region_size[1]*.8), int(region_size[1]*.8))
+        g.target_image_size = (int(t.central[1]*.82), int(t.central[1]*.82))
 
     def generate_new_grid(selected_imgname, user_selected=False):
         window["gallery"].hide_row()
@@ -703,22 +710,39 @@ def main_window(start_hidden=True):
         #window["grid_panel"].update()
         #window.refresh()
 
+    def get_gallery_and_thumbnail_size():
+        print(f"g.target_image_size: {g.target_image_size}") # it's only 2% off from what I gotby eye for the gallery region, so just use it again here.
+        thumbnail_max_width, thumbnail_max_height = g.target_image_size
+        no_of_rows = math.ceil(len(g.gallery_list) / t.gallery_columns)
+        thumbnail_max_width = thumbnail_max_width/t.gallery_columns
+        thumbnail_max_height = thumbnail_max_height/no_of_rows
+        print(f"thumbnail_max_weight: {thumbnail_max_width}, thumbnail_max_height: {thumbnail_max_height}")
+        if thumbnail_max_height < thumbnail_max_width:
+            return thumbnail_max_height
+        else:
+            return thumbnail_max_width
+
     def move_to_gallery():
         """ set the appropriate buttons, text output etc for the 'gallery' screen.\nAlso clear grid data + button associations."""
 
         window["click_counter"].hide_row()
         window["grid_panel"].hide_row()
-        window.refresh()
         window["gallery"].unhide_row()
+        get_panel_dimensions()
+        thumbnail_width = get_gallery_and_thumbnail_size()
+        window["gallery"].expand(expand_row=True)
+        window.refresh()
+        print(f"gallery.get_size: {window["gallery"].get_size()}")
+        #window["gallery_test"].unhide_row()
 
-        window["set_scramble"].update(disabled = True)
+        """window["set_scramble"].update(disabled = True)
         window["set_gallery"].update(disabled = True)
         window["click_counter"].hide_row()
         window["grid_panel"].hide_row()
         window["gallery"].unhide_row()
         window["gallery"].expand(expand_y=True, expand_row=True)
-        window["set_scramble"].update(disabled = True)
-        window.refresh()
+        window["set_scramble"].update(disabled = True)"""
+        #window.refresh()
         g.start_screen=True
         t.is_grid_screen = False
 
@@ -733,21 +757,24 @@ def main_window(start_hidden=True):
         generate_new_grid(image_for_grid)
         window["set_scramble"].update(disabled=False, button_color=t.highlight_button_colour)
 
+    def calculate_gal_button_size():
+        t.gallery.size
+        len(g.gallery_list)
+
     def button_yielder():
 
-        MAX_COL = 5
         button_layout =  [
                         #[sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)],
-                        [(setup_text("\n - choose an image - \n", padding=20))]
+                        #[(setup_text("\n - choose an image - \n", padding=((0,0),(0,10))))]
                         ]
 
-        for j in range(0, MAX_COL+1):
+        for j in range(0, t.gallery_columns+1):
             button_layout.append(
-                        [sg.Button(button_text="", image_source=g.gallery_list[i + (j * MAX_COL)], file_types=(("ALL files", ".*"),),
-                                key=f"imgkey_{g.gallery_list[i + (j * MAX_COL)]}", image_size=(g.thumbnail_width,g.thumbnail_width), pad=5)
-                                        for i in range(MAX_COL) if i + (MAX_COL * j) < len(g.gallery_list)])
+                        [sg.Button(button_text="", image_source=g.gallery_list[i + (j * t.gallery_columns)], file_types=(("ALL files", ".*"),),
+                                key=f"imgkey_{g.gallery_list[i + (j * t.gallery_columns)]}", image_size=(g.thumbnail_width,g.thumbnail_width), pad=5)
+                                        for i in range(t.gallery_columns) if i + (t.gallery_columns * j) < len(g.gallery_list)])
 
-        button_layout.append([sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)])
+        #button_layout.append([sg.VStretch(background_color=show_stretchers if debug_colours else t.background_colour)])
 
         return button_layout
 
@@ -765,49 +792,56 @@ def main_window(start_hidden=True):
                 else:
                     window[key].update(button_color = t.button_colour)
 
-
     def update_window_size(do_maximise=False, move_on=False):
-        if not t.enable_resize:
+        if not t.allow_resize:
             return
+        print("\n[ UPDATING WINDOW SIZE ]\n")
         new_screen_x, new_screen_y = window.size
         if new_screen_x == t.screen_x and new_screen_y == t.screen_y:
            print("Screen is the same size as it already was, ignoring.")
            return
-
+        new_thumbnail_width = get_gallery_and_thumbnail_size()
+        """print(f"t.gallery.get_size(): {t.gallery.get_size()}")
         max_x = max(new_screen_x - t.screen_x, t.screen_x - new_screen_x)
         max_y = max(new_screen_y - t.screen_y, t.screen_y - new_screen_y)
-        #print(f"max_x: {max_x} // max_y: {max_y}")
+        print(f"max_x: {max_x} // max_y: {max_y}")
         #if max_x > (t.screen_x/10) and max_y > (t.screen_y/10):
         if ((max_x and max_x < 100) and (max_y and max_y < 100)) or (not max_x and not max_y):
             print("diff is less than 100, ignoring.")
             return
 
-        #print(f"Do maximised: {do_maximise}")
-        ratio = new_screen_y / t.maximised_size[1]
-        #print(f"ratio (new_screen_y / t.maximised_size[1]: {ratio}")
-        if ratio > 1 and not do_maximise:
+        ratio_y = new_screen_y / t.screen_y
+        #ratio_y = new_screen_y / t.maximised_size[1]
+        ratio_x = new_screen_x / t.screen_x
+        #ratio_x = new_screen_x / t.maximised_size[0]
+        if ratio_y > 1 and ratio_x > 1 and not do_maximise:
             print(f"Ratio is larger than max size. t.maximised_size: {t.maximised_size}, new screen: {window.size}, ignoring.")
             return
-
-        new_thumbnail_width = int((new_screen_x*.66)/6)
-        #print(f"new thumbnail width: {new_thumbnail_width}")
+        biggest_change = max(ratio_y, ratio_x) ### does not fix the issue#
+        print(f"Biggest change = {biggest_change}. Biggest change == ratio_y: {biggest_change == ratio_y}")
+        #new_thumbnail_width = int((new_screen_x*.66)/6) ###  TODO:<--- need to incorporate biggest_change here.
+        new_thumbnail_width = g.thumbnail_width * biggest_change ###  TODO:<--- need to incorporate biggest_change here.
+        #print(f"new thumbnail width: {new_thumbnail_width}")"""
+        print(f"New_thumbnail_width: {new_thumbnail_width}")
         if new_thumbnail_width > 200:
             new_thumbnail_width = 200
-
         elif 200 - new_thumbnail_width < 20:
             return
-
+        g.thumbnail_width = new_thumbnail_width
         if do_maximise:
+            print("do_maximise")
             if g.thumbnail_width == 200:
                 print("apparently g.thumbnail_width is already 200.")
                 return
             g.thumbnail_width = 200 # default thumbnail size, can keep it safe somewhere later
 
+        fade_in_out(fade_in=False)
         t.screen_x = new_screen_x
         t.screen_y = new_screen_y
 
         if not t.is_grid_screen:
-            g.thumbnail_width = int(g.thumbnail_width * ratio)
+            #g.thumbnail_width = int(g.thumbnail_width * biggest_change)
+            print(f"g.thumbnail_width (840): {g.thumbnail_width}")
             make_gallery_list(force_thumbnails=True) # without this, 'image_size' just uses a smaller portion of the existing image
 
             #print("window.AllKeysDict:\n\n", window.AllKeysDict, "\n\n")
@@ -821,6 +855,7 @@ def main_window(start_hidden=True):
 
         window.refresh()
         update_window_size_data()
+        fade_in_out(fade_in=True)
         t.save_settings()
         if move_on:
             if t.is_grid_screen:
@@ -878,6 +913,7 @@ def main_window(start_hidden=True):
                   ]
 
     advanced_settings = [
+                  [sg.Canvas(size=t.settings_panel_width_bar, background_color = "orange" if debug_colours else  t.background_colour, key="settings_width_bar")],
                   [sg.Column(layout=adv_settings, element_justification="center", justification="right", vertical_alignment="center", expand_y=False, background_color="red" if debug_colours else t.background_colour)]
                   ]
 
@@ -905,7 +941,7 @@ def main_window(start_hidden=True):
     ]
 
     outer_side = [
-        [sg.Canvas(size=(1,1), background_color = "orange" if debug_colours else  t.background_colour, key="spacer_settings"),
+        [sg.Canvas(size=(1,1), background_color = "orange" if debug_colours else  t.background_colour, key="settings_height_bar"),
         sg.Column(layout=pillar, expand_y=True, background_color="orange" if debug_colours else t.background_colour, element_justification="center", pad=((10,10),(0,0))),
         sg.Column(side_panel, key="side", element_justification="center", vertical_alignment="center",
                         background_color="dark blue" if debug_colours else t.background_colour, pad=0, expand_x=False, expand_y=True)]
@@ -914,14 +950,17 @@ def main_window(start_hidden=True):
     outer_grid = [
             [sg.Column(layout=grid_panel, key="grid_panel", background_color="magenta" if debug_colours else t.background_colour,
                   pad=(5,5), justification="center", element_justification='center', vertical_alignment='center', expand_x=True, expand_y=True, visible=True)],
+            [(setup_text("\n - choose an image - \n", padding=0, key="gallery_text"))],
             [sg.Column(layout=button_yielder(), key="gallery", background_color="dark blue" if debug_colours else t.background_colour,
                   pad=(5,5), element_justification='center', vertical_alignment='center', expand_x=True, expand_y=True, visible=True)],
+            #[sg.Canvas(size=(50,50), key="gallery_test", background_color="magenta",# if debug_colours else t.background_colour,
+                  #pad=(5, 10), expand_x=True, expand_y=True, visible=True)],
     ]
 
     layout = [[sg.Frame(title=" •• SCRAMBLE •• ", key="main_window",
                 layout=[[
                         sg.Column(layout=outer_grid, key="central",
-                                    background_color="maroon" if debug_colours else t.background_colour, pad=(5,5),
+                                    background_color="maroon" if debug_colours else t.background_colour, pad=((35,5),(5)),# , pad=(5,5),
                                     element_justification='center', vertical_alignment='center', expand_x=True, expand_y=True),
                         sg.pin(sg.Column(layout=outer_side, expand_y=True, background_color="yellow" if debug_colours else t.background_colour, key="true_side", justification="right", vertical_alignment="c", pad=0)
                         )]],
@@ -930,7 +969,7 @@ def main_window(start_hidden=True):
             ]
 
     window = sg.Window(' •• SCRAMBLE •• ', layout, keep_on_top=False, finalize=True, margins=(3,3),
-                       no_titlebar=not t.enable_resize, resizable=t.enable_resize, return_keyboard_events=True,
+                       no_titlebar=False, resizable=t.allow_resize, titlebar_background_color=t.background_colour, return_keyboard_events=True, # no_titlebar=not t.allow_resize
                        enable_window_config_events=True, element_justification="center", alpha_channel=0 if start_hidden else .8, transparent_color="#D0FF00")
 
 
@@ -939,31 +978,45 @@ def main_window(start_hidden=True):
     if t.start_maximised:
         window.maximize()
         window.refresh()
-        t.maximised_size = tuple(window.size)
+        t.maximised_size = window.size
     else:
         window.set_size(size=(t.screen_x, t.screen_y))
 
-    t.game_started = False
-    size_got = False
-    hide_grid = False
-    settings_saved = False
+    t.game_started = size_got = hide_grid = settings_saved = False
+
     while True:
         event, values = window.read(timeout=500)
 
-        """
-
-DEFAULT_PIXELS_TO_CHARS_SCALING = (10,26)
-
-The conversion simply takes your size[0] and multiplies by 10 and your size[1] and multiplies it by 26.
-
-        """
-
         if hide_grid:
             move_to_gallery()
-            fade_in_out(fade_in=True)
             window.refresh()
             hide_grid = False
+            get_gallery_and_thumbnail_size()
+            fade_in_out(fade_in=True)
+            """while True:
+                test = input("enter desired gallery are dimensions as xxx, yyy:\n")
+                if not test:
+                    break
+                x, y = test.split(",", 1)
+                print(f"x: {x} / y: {y}")
 
+                #central size: (1343, 978)
+                #gallery area size: (1333, 805)
+
+                window["gallery_test"].set_size((int(x) if x != "None" else None, int(y) if y != "None" else None))
+                central_size = window["central"].get_size()
+                window.refresh()
+                # 80 percent of central_size y
+                gallery_area_size = window["gallery_test"].get_size()
+                print(f"central size: {central_size}\ngallery area size: {gallery_area_size}")
+                central_x, central_y = central_size
+                gallery_x, gallery_y = gallery_area_size
+                print(f"central_y: {central_y}\ngallery_y: {gallery_y}")
+                ratio = gallery_y/central_y
+                print(f"Ratio of gallery_y/central_y: {ratio}")
+                #0.8231083844580777 at full screen
+
+                Ratio of gallery_y/central_y: 0.8228882833787466"""
         if g.start_screen and not size_got:
             size_got=True
             g.start_screen = False
@@ -973,27 +1026,28 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                 t.main_window = window["main_window"]
                 t.central = window["central"]
                 t.true_side = window["true_side"]
-                window["spacer_settings"].set_size((1, window.size[0]-5)) #< - forces the settings panel to be full height
+                window["settings_height_bar"].set_size((1, window.size[0]-5)) #< - forces the settings panel to be full height
                 window.refresh()
                 t.true_side.expand(expand_row=True, expand_y=True, expand_x=False)
+                print(f"t.true_side.get_size(): {t.true_side.get_size()}")
+                print(f"window['settings_width_bar'].get_size(): {window['settings_width_bar'].get_size()}")
+                print(f'window["adv_rotations"].get_size(): {window["adv_rotations"].get_size()}')
+                window["settings_width_bar"].set_size((window["adv_rotations"].get_size()[0], None))
                 window.refresh()
-                #t.true_side.set_size(size=(t.main_window.get_size()[0] - t.central.get_size()[0], t.main_window.get_size()[1]*.99)) < - does lit nothing
-            # panels in central: #
+                t.settings_panel_width_bar = window['settings_width_bar'].get_size()
+                print(f"window['settings_width_bar'].get_size(): {window['settings_width_bar'].get_size()}")
                 t.gallery = window["gallery"]
                 t.grid_panel = window["grid_panel"]
                 t.grid_box = window["grid"]
+                hide_grid=True
 
-            # panels in side: #
-                g.true_side = window["true_side"].get_size()
                 g.grid_panel_size = panel_size
                 print(f"captured grid_panel size: {g.grid_panel_size}")
-                size_got=True
-                hide_grid=True
                 get_panel_dimensions()
 
                 highlight_gridsize_button()
+                #window["gallery_text"].expand(expand_x=True, expand_row=True)
 
-                g.start_screen = False
 
         if event:
             if "Escape" in event or event == "exit":
@@ -1066,24 +1120,25 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
                 show_incorrect()
 
             elif event == "__WINDOW CONFIG__" and size_got and window.size != t.window_size:
-                if not t.enable_resize:
+                if not t.allow_resize:
                     if not window.maximized or window.size != t.maximised_size:
                         window.maximize()
                         t.window_size = window.size
                         update_window_size_data()
                 else:
+                    t.window_size = window.size
+                    get_panel_dimensions()
+                    #t.gallery.update(visible=False)
+                    #window.refresh()
                     if window.size == t.maximised_size:
                         t.start_maximised = True
-                        t.window_size = window.size
                         update_window_size(do_maximise=True)
-                        update_window_size_data()
-                        settings_saved = True
                     else:
                         t.start_maximised = False
-                        t.window_size = window.size
                         update_window_size()
-                        update_window_size_data()
-                        settings_saved = True
+                    update_window_size_data()
+
+                    settings_saved = True
 
         if window.is_closed():
             if not settings_saved:
@@ -1093,15 +1148,11 @@ The conversion simply takes your size[0] and multiplies by 10 and your size[1] a
 def main():
 
     outcome = None
-    skip_splash = False
     while True:
         start_hidden=True
         while True:
-            #if not skip_splash:
-                #splash_window()
             outcome = main_window(start_hidden=start_hidden)
             start_hidden=False
-            #skip_splash=True
             if outcome:
                 break
         if outcome and outcome == "Done":

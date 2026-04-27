@@ -397,3 +397,17 @@ hm. 'return to gallery' if you left fullscreen in grid screen increases the wind
 
 7.08pm
 finally figured it out. Now the right hand panel is entirely stationary and isn't redrawn/moved when switching from gallery/grid modes.
+
+8.18am 27/4/26
+Thought this version was basically ready for pasture,  but I've broken the 'no resize' version; it still uses the existing size recorded, but doesn't allow restarting or show the titlebar, so you can't even select it from start bar.
+
+Okay, fixed that now I think - with one major exception I will describe after. The 'allow resize' is set in the settings file for now, and forced fullscreen and fullscreen-sizing if false.
+Spacing is slightly off; need to re-add VStretch() to the gallery and grid screens to make it recenter. It just happened to in the slightly shorter version with the title bar.
+
+The thing that's still wrong: with no title bar, you can never tab back to it. It doesn't appear in start bar or in alt-tab options.
+So have re-added the title bar. Will have to make it background-colour coloured so it blends a bit better. Not sure if I can stop the user being able to drag it, but for now it just forced it to re-fullscreen if set to not allow resizing.
+Oh. But if you set it to fullscreen it removed the 'fullscreen' button, which means if you do move it without resizing, you can never set it back to proper fullscreen. Will need to investigate that more properly.
+
+As it stands, the bool works and doesn't break everything. Will keep it on allow_resize now as that's just more flexible, not sure why you'd want to force fullscreen really. Aesthetically it's nice without the titlebar but without the titlebar the window just disappears forever rn. Would need some invisible window also running that did have a titlebar that would set the main window as focus, or something like that. Will look into it maybe, or just scrap the forced fullscreen entirely. I think I added that when the resizing part was just too broken to allow.
+
+Added a fade out/in to the resize, so instead of it jumping around, when you release the mouse it disappears briefly then comes back. not sure if I like it or not. the thumbnail sizing seems to be working much better now though. Except that the side panel collapses far before the images do, so they're not forced to resize themselves again until the entire side panel is gone. 
