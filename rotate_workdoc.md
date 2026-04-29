@@ -410,4 +410,7 @@ Oh. But if you set it to fullscreen it removed the 'fullscreen' button, which me
 
 As it stands, the bool works and doesn't break everything. Will keep it on allow_resize now as that's just more flexible, not sure why you'd want to force fullscreen really. Aesthetically it's nice without the titlebar but without the titlebar the window just disappears forever rn. Would need some invisible window also running that did have a titlebar that would set the main window as focus, or something like that. Will look into it maybe, or just scrap the forced fullscreen entirely. I think I added that when the resizing part was just too broken to allow.
 
-Added a fade out/in to the resize, so instead of it jumping around, when you release the mouse it disappears briefly then comes back. not sure if I like it or not. the thumbnail sizing seems to be working much better now though. Except that the side panel collapses far before the images do, so they're not forced to resize themselves again until the entire side panel is gone. 
+Added a fade out/in to the resize, so instead of it jumping around, when you release the mouse it disappears briefly then comes back. not sure if I like it or not. the thumbnail sizing seems to be working much better now though. Except that the side panel collapses far before the images do, so they're not forced to resize themselves again until the entire side panel is gone.
+
+12.15pm 29/4/26
+Made a quick little icon and added it as base64.
